@@ -76,6 +76,18 @@ A smoother experience throughout the application.
 
 Navic+ is developed with an Android-first mindset, aiming to remain fast, responsive, and focused on music. Every feature is added with the goal of improving the listening experience without compromising performance, usability, or compatibility with existing Navidrome and Subsonic servers.
 
+## Why Navic+?
+
+Navic+ started as a personal fork of Navic.
+
+Around June 2026, I made a small private modification to the app: the ability to sort music in playlists. At the time, I had no intention of maintaining a public fork. That small change, however, became my introduction to the codebase. As I continued experimenting, I gradually learned how the project was structured and how its different components worked.
+
+I also noticed that development had naturally slowed as the original project matured. Rather than waiting, I decided to experiment and see how far i could take my own vision.
+
+I invested in AI coding tools to speed up development, but the goal was never to generate as much code as possible. My focus was on understanding the existing architecture, refactoring carefully, and implementing features without sacrificing stability. Every major change was built with long-term maintainability in mind.
+
+Navic+ is my vision of what an Android music player for Navidrome and Subsonic can be: modern, powerful, and enjoyable to use while remaining open source.
+
 ## Credits
 
 Navic+ is a fork of [Navic](https://github.com/ssalggnikool/Navic).
