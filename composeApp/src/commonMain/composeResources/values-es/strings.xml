@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Navic</string>
+    <string name="app_name" translatable="false">Sonora</string>
     <string name="title_library">Biblioteca</string>
     <string name="title_playlists">Lista de reproducción</string>
     <string name="title_settings">Ajustes</string>
@@ -106,7 +106,7 @@
     <string name="notice_copied">Copiado al portapapeles.</string>
     <string name="notice_expiry">Caduca en %1$s.</string>
     <string name="notice_loading_lyrics">Cargando letra...\nEsto puede llevar un tiempo.</string>
-    <string name="info_app_version">Navic+ %1$s</string>
+    <string name="info_app_version">Sonora %1$s</string>
     <string name="info_action_is_permanent">Esta acción no se puede deshacer</string>
     <string name="info_error">Algo salió mal.</string>
     <string name="info_error_show">Mostrar detalles</string>

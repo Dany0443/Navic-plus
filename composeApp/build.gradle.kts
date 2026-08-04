@@ -24,7 +24,7 @@ configurations.all {
 }
 
 extensions.configure<ValkyrieExtension> {
-	packageName = "paige.navic.icons"
+	packageName = "dan.sonora.icons"
 	generateAtSync = true
 	outputDirectory = layout.buildDirectory.dir("generated/sources/valkyrie")
 
@@ -81,7 +81,7 @@ tasks {
 
 extensions.configure<KotlinMultiplatformExtension> {
 	extensions.configure<KotlinMultiplatformAndroidLibraryExtension> {
-		namespace = "paige.navic"
+		namespace = "dan.sonora"
 		compileSdk = libs.versions.android.compileSdk.get().toInt()
 		minSdk = libs.versions.android.minSdk.get().toInt()
 

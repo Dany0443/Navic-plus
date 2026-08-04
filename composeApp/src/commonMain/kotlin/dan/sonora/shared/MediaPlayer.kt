@@ -1,0 +1,166 @@
+package dan.sonora.shared
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import dan.sonora.domain.manager.ConnectivityManager
+import dan.sonora.domain.manager.DownloadManager
+import dan.sonora.domain.manager.PreferenceManager
+import dan.sonora.domain.models.DomainExplicitStatus
+import dan.sonora.domain.models.DomainRadio
+import dan.sonora.domain.models.DomainSong
+import dan.sonora.domain.models.DomainSongCollection
+import dan.sonora.domain.models.settings.ExplicitContentPlayback
+import dan.sonora.domain.repositories.PlayerStateRepository
+import dan.sonora.ui.core.PlayerUiState
+import dan.sonora.ui.core.QueueUiState
+import dan.sonora.util.core.Logger
+import kotlin.time.Duration.Companion.seconds
+
+abstract class MediaPlayerViewModel(
+	private val stateRepository: PlayerStateRepository,
+	protected val connectivityManager: ConnectivityManager,
+	protected val downloadManager: DownloadManager,
+	protected val preferenceManager: PreferenceManager
+) : ViewModel() {
+
+	@Suppress("PropertyName")
+	protected val _uiState = MutableStateFlow(PlayerUiState())
+	val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+	val queueUiState: StateFlow<QueueUiState> = uiState
+		.map { state ->
+			QueueUiState(
+				queue = state.queue,
+				currentIndex = state.currentIndex,
+				isPaused = state.isPaused
+			)
+		}
+		.distinctUntilChanged()
+		.stateIn(viewModelScope, SharingStarted.Eagerly, QueueUiState())
+
+	protected fun isExplicit(song: DomainSong): Boolean {
+		return song.explicitStatus == DomainExplicitStatus.Explicit
+			&& preferenceManager.explicitContentPlayback != ExplicitContentPlayback.Allowed
+	}
+
+	init {
+		viewModelScope.launch {
+			restoreState()
+			observeAndSaveState()
+		}
+	}
+
+	abstract fun addToQueueSingle(song: DomainSong, notify: Boolean = true)
+	abstract fun addToQueue(collection: DomainSongCollection, notify: Boolean = true)
+	abstract fun addToQueue(songs: List<DomainSong>, notify: Boolean = true)
+	abstract fun removeFromQueue(index: Int)
+	abstract fun moveQueueItem(fromIndex: Int, toIndex: Int)
+	abstract fun clearQueue()
+	abstract fun playCollectionAt(collection: DomainSongCollection, index: Int)
+	abstract fun playAt(index: Int)
+	abstract fun playNextSingle(song: DomainSong)
+	abstract fun playNext(collection: DomainSongCollection)
+	abstract fun playRadio(radio: DomainRadio)
+	abstract fun pause()
+	abstract fun resume()
+	abstract fun seek(normalized: Float)
+	abstract fun next()
+	abstract fun previous()
+	abstract fun toggleShuffle()
+	abstract fun toggleRepeat()
+	abstract fun shufflePlay(collection: DomainSongCollection)
+	abstract fun setPlaybackSpeed(value: Float)
+
+	fun playNow(song: DomainSong) {
+		clearQueue()
+		addToQueueSingle(song, notify = false)
+		playAt(0)
+	}
+
+	fun playNow(collection: DomainSongCollection, startIndex: Int = 0) {
+		clearQueue()
+		addToQueue(collection, notify = false)
+		playAt(startIndex)
+	}
+
+	fun playNow(songs: List<DomainSong>, startIndex: Int = 0) {
+		clearQueue()
+		addToQueue(songs, notify = false)
+		playAt(startIndex)
+	}
+
+	fun togglePlay() {
+		if (!uiState.value.isPaused) {
+			pause()
+		} else {
+			resume()
+		}
+	}
+
+	abstract fun syncPlayerWithState(state: PlayerUiState)
+
+	private suspend fun restoreState() {
+		val savedJson = stateRepository.loadState()
+		if (!savedJson.isNullOrBlank()) {
+			try {
+				val restoredState = Json.decodeFromJsonElement<PlayerUiState>(
+					Json.parseToJsonElement(savedJson)
+				)
+				val stateToApply = restoredState.copy(isPaused = true, isLoading = false)
+
+				_uiState.value = stateToApply
+
+				syncPlayerWithState(stateToApply)
+
+			} catch (e: Exception) {
+				Logger.e("MediaPlayerViewModel", "Failed to restore state!", e)
+				_uiState.value = PlayerUiState()
+			}
+		}
+	}
+
+	@OptIn(FlowPreview::class)
+	private fun observeAndSaveState() {
+		viewModelScope.launch {
+			uiState
+				.distinctUntilChanged { old, new ->
+					old.currentIndex == new.currentIndex &&
+						old.queue == new.queue &&
+						old.isPaused == new.isPaused &&
+						old.repeatMode == new.repeatMode &&
+						old.isShuffleEnabled == new.isShuffleEnabled
+				}
+				.collect { state ->
+					saveStateInternal(state)
+				}
+		}
+
+		viewModelScope.launch {
+			uiState
+				.debounce(2.seconds)
+				.collect { state ->
+					saveStateInternal(state)
+				}
+		}
+	}
+
+	private suspend fun saveStateInternal(state: PlayerUiState) {
+		try {
+			val jsonString = Json.encodeToString(state)
+			stateRepository.saveState(jsonString)
+		} catch (e: Exception) {
+			Logger.e("MediaPlayerViewModel", "Failed to save state!", e)
+		}
+	}
+}

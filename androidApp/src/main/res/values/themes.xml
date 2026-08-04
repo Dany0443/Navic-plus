@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-	<style name="Theme.Navic" parent="android:Theme.DeviceDefault">
+	<style name="Theme.Sonora" parent="android:Theme.DeviceDefault">
 		<item name="android:windowActionBar">false</item>
 		<item name="android:windowNoTitle">true</item>
+	</style>
+
+	<!-- Explicit parent overrides name-based inheritance from Theme.Sonora. -->
+	<style name="Theme.Sonora.Splash" parent="Theme.SplashScreen">
+		<item name="windowSplashScreenBackground">@color/sonora_bg</item>
+		<!-- The vinyl, sized to match SonoraSplash's first frame. The system paints
+		     this before Compose exists, so the logo is up from the very first frame
+		     and Compose takes over mid-animation without a visible handoff. -->
+		<item name="windowSplashScreenAnimatedIcon">@drawable/splash_vinyl</item>
+		<item name="postSplashScreenTheme">@style/Theme.Sonora</item>
 	</style>
 </resources>

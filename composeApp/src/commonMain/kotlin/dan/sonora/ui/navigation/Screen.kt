@@ -1,0 +1,218 @@
+package dan.sonora.ui.navigation
+
+import androidx.compose.runtime.Immutable
+import androidx.navigation3.runtime.NavKey
+import kotlinx.serialization.Serializable
+import dan.sonora.domain.models.DomainAlbumListType
+import dan.sonora.domain.models.DomainArtistListType
+import dan.sonora.domain.models.DomainSongListType
+
+@Immutable
+@Serializable
+sealed interface Screen : NavKey {
+
+	// tabs
+	@Immutable
+	@Serializable
+	data class Library(
+		val nested: Boolean = false
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class Starred(
+		val nested: Boolean = false,
+		val listType: DomainArtistListType = DomainArtistListType.AlphabeticalByName
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class PlaylistList(
+		val nested: Boolean = false
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class ArtistList(
+		val nested: Boolean = false,
+		val listType: DomainArtistListType = DomainArtistListType.AlphabeticalByName
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class AlbumList(
+		val nested: Boolean = false,
+		val listType: DomainAlbumListType = DomainAlbumListType.AlphabeticalByArtist
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class GenreList(
+		val nested: Boolean = false
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class GenreDetail(
+		val genreName: String
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class SongList(
+		val nested: Boolean = false,
+		val listType: DomainSongListType = DomainSongListType.FrequentlyPlayed
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class RadioList(
+		val nested: Boolean = false
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class Insights(
+		val nested: Boolean = false
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data object AdvancedStatistics : Screen
+
+	// misc
+	@Immutable
+	@Serializable
+	data object Onboarding : Screen
+
+	@Immutable
+	@Serializable
+	data object Login : Screen
+
+	@Immutable
+	@Serializable
+	data object NowPlaying : Screen
+
+	@Immutable
+	@Serializable
+	data object Lyrics : Screen
+
+	@Immutable
+	@Serializable
+	data object Queue : Screen
+
+	@Immutable
+	@Serializable
+	data object PlaybackSpeed : Screen
+
+	@Immutable
+	@Serializable
+	data class CollectionDetail(
+		val collectionId: String,
+		val tab: String
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data class SongDetailSheet(val songId: String, val coverArtId: String? = null) : Screen
+
+	@Immutable
+	@Serializable
+	data class SongDetailScreen(val songId: String, val coverArtId: String? = null) : Screen
+
+	@Immutable
+	@Serializable
+	data class Search(
+		val nested: Boolean = false
+	) : Screen
+
+	@Immutable
+	@Serializable
+	data object ShareList : Screen
+
+	@Immutable
+	@Serializable
+	data class ArtistDetail(val artist: String) : Screen
+
+	// settings
+	@Immutable
+	@Serializable
+	sealed interface Settings : Screen {
+		@Immutable
+		@Serializable
+		data object Root : Settings
+
+		@Immutable
+		@Serializable
+		data object Appearance : Settings
+
+		@Immutable
+		@Serializable
+		data object Playback : Settings
+
+		@Immutable
+		@Serializable
+		data object AdvancedEqualizer : Settings
+
+		@Immutable
+		@Serializable
+		data object Developer : Settings
+
+		@Immutable
+		@Serializable
+		data object BottomAppBar : Settings
+
+		@Immutable
+		@Serializable
+		data object NowPlaying : Settings
+
+		@Immutable
+		@Serializable
+		data object About : Settings
+
+		@Immutable
+		@Serializable
+		data object Insights : Settings
+
+		/** Per-provider detail page: connection status, sync, disconnect. */
+		@Immutable
+		@Serializable
+		data class InsightsProvider(val providerId: String) : Settings
+
+		@Immutable
+		@Serializable
+		data object Acknowledgements : Settings
+
+		@Immutable
+		@Serializable
+		data object DataStorage : Settings
+
+		@Immutable
+		@Serializable
+		data object Fonts : Settings
+
+		@Immutable
+		@Serializable
+		data object Themes : Settings
+
+		@Immutable
+		@Serializable
+		data object CustomHeaders : Settings
+
+		@Immutable
+		@Serializable
+		data object StreamingQuality : Settings
+
+		@Immutable
+		@Serializable
+		data object DownloadQuality : Settings
+
+		@Immutable
+		@Serializable
+		data object Logs : Settings
+
+		@Immutable
+		@Serializable
+		data object AppIcon : Settings
+	}
+}

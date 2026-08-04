@@ -162,7 +162,7 @@
     <string name="notice_copied">已复制。</string>
     <string name="notice_expiry">%1$s 后过期。</string>
     <string name="notice_loading_lyrics">加载歌词中...\n请稍等。</string>
-    <string name="info_app_version">Navic+ %1$s</string>
+    <string name="info_app_version">Sonora %1$s</string>
     <string name="info_action_is_permanent">此操作无法撤销</string>
     <string name="info_error">出错了。</string>
     <string name="info_error_show">查看详情</string>

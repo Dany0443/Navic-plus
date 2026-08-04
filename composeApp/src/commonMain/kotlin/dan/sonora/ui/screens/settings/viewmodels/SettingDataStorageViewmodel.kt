@@ -1,0 +1,93 @@
+package dan.sonora.ui.screens.settings.viewmodels
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import dan.sonora.data.database.dao.SyncActionDao
+import dan.sonora.domain.manager.ConnectivityManager
+import dan.sonora.domain.manager.DownloadManager
+import dan.sonora.domain.manager.SyncManager
+import dan.sonora.domain.repositories.DbRepository
+import dan.sonora.domain.repositories.SongRepository
+
+class SettingsDataStorageViewModel(
+	private val syncManager: SyncManager,
+	private val dbRepository: DbRepository,
+	private val syncDao: SyncActionDao,
+	private val downloadManager: DownloadManager,
+	private val songRepository: SongRepository,
+	connectivityManager: ConnectivityManager
+) : ViewModel() {
+
+	val syncState = syncManager.syncState
+		.stateIn(
+			scope = viewModelScope,
+			started = SharingStarted.WhileSubscribed(5000),
+			initialValue = syncManager.syncState.value
+		)
+
+	val pendingActionCount: StateFlow<Int>
+		field = MutableStateFlow(0)
+
+	val downloadCount = downloadManager.downloadCount.stateIn(
+		viewModelScope, SharingStarted.WhileSubscribed(5000), 0
+	)
+	val downloadSize = downloadManager.downloadSize.stateIn(
+		viewModelScope, SharingStarted.WhileSubscribed(5000), 0L
+	)
+
+	val isDownloadingLibrary = downloadManager.isDownloadingLibrary
+	val libraryDownloadProgress = downloadManager.libraryDownloadProgress
+	val isOnline = connectivityManager.isOnline
+
+	init {
+		loadPendingActions()
+	}
+
+	private fun loadPendingActions() {
+		viewModelScope.launch(Dispatchers.IO) {
+			pendingActionCount.value = syncDao.getPendingActions().size
+		}
+	}
+
+	fun triggerManualSync() {
+		syncManager.triggerManualSync()
+	}
+
+	fun rebuildDatabase() {
+		viewModelScope.launch(Dispatchers.IO) {
+			dbRepository.removeEverything()
+			syncManager.stopPeriodicSync()
+			pendingActionCount.value = 0
+		}
+		triggerManualSync()
+	}
+
+	fun removeAllActions() {
+		viewModelScope.launch(Dispatchers.IO) {
+			syncDao.clearAllActions()
+			pendingActionCount.value = 0
+		}
+	}
+
+	fun clearAllDownloads() {
+		downloadManager.clearAllDownloads()
+	}
+
+	fun downloadEntireLibrary() {
+		viewModelScope.launch(Dispatchers.IO) {
+			val allSongs = songRepository.getAllSongs()
+			downloadManager.downloadEntireLibrary(allSongs)
+		}
+	}
+
+	fun cancelLibraryDownload() {
+		downloadManager.cancelAllActiveDownloads()
+	}
+}

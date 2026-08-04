@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Navic</string>
+    <string name="app_name" translatable="false">Sonora</string>
     <string name="title_library">Библиотека</string>
     <string name="title_playlists">Плейлисты</string>
     <string name="title_settings">Настройки</string>
@@ -102,7 +102,7 @@
     <string name="notice_copied">Скопировано в буфер обмена.</string>
     <string name="notice_expiry">Истекает через %1$s.</string>
     <string name="notice_loading_lyrics">Загружаем текст...\nЭто займет время.</string>
-    <string name="info_app_version">Navic+ %1$s</string>
+    <string name="info_app_version">Sonora %1$s</string>
     <string name="info_action_is_permanent">Это не может быть отменено</string>
     <string name="info_error">Что-то пошло не так.</string>
     <string name="info_error_show">Показать детали</string>

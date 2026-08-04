@@ -1,0 +1,151 @@
+package dan.sonora.ui.screens.song.viewmodels
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import dan.sonora.domain.manager.ConnectivityManager
+import dan.sonora.domain.manager.DownloadManager
+import dan.sonora.domain.manager.SessionManager
+import dan.sonora.domain.manager.SmartPlaylistManager
+import dan.sonora.domain.models.DomainSong
+import dan.sonora.domain.models.DomainSongListType
+import dan.sonora.domain.repositories.LocalMusicRepository
+import dan.sonora.domain.repositories.SongRepository
+import dan.sonora.ui.core.UiState
+
+class SongListViewModel(
+	initialListType: DomainSongListType = DomainSongListType.FrequentlyPlayed,
+	private val repository: SongRepository,
+	private val localMusicRepository: LocalMusicRepository,
+	private val smartPlaylistManager: SmartPlaylistManager,
+	private val downloadManager: DownloadManager,
+	private val sessionManager: SessionManager,
+	connectivityManager: ConnectivityManager
+) : ViewModel() {
+	val songsState: StateFlow<UiState<ImmutableList<DomainSong>>>
+		field = MutableStateFlow<UiState<ImmutableList<DomainSong>>>(UiState.Loading())
+
+	val allDownloads = downloadManager.allDownloads
+		.stateIn(
+			scope = viewModelScope,
+			started = SharingStarted.Lazily,
+			initialValue = persistentListOf()
+		)
+
+	val selectedSong: StateFlow<DomainSong?>
+		field = MutableStateFlow(null)
+
+	val starred: StateFlow<Boolean>
+		field = MutableStateFlow(false)
+
+	val selectedSongRating: StateFlow<Int>
+		field = MutableStateFlow(0)
+
+	val selectedSorting: StateFlow<DomainSongListType>
+		field = MutableStateFlow(initialListType)
+
+	val selectedReversed: StateFlow<Boolean>
+		field = MutableStateFlow(false)
+
+	val isOnline = connectivityManager.isOnline
+
+	init {
+		viewModelScope.launch {
+			if (initialListType == DomainSongListType.LocalMusic) {
+				refreshSongs(false)
+			} else {
+				sessionManager.isLoggedIn.collect { if (it) refreshSongs(false) }
+			}
+		}
+	}
+
+	fun selectSong(song: DomainSong) {
+		viewModelScope.launch {
+			selectedSong.value = song
+			starred.value = repository.isSongStarred(song)
+			selectedSongRating.value = repository.getSongRating(song)
+		}
+	}
+
+	fun clearSelection() {
+		selectedSong.value = null
+	}
+
+	fun refreshSongs(fullRefresh: Boolean) {
+		viewModelScope.launch {
+			val sorting = selectedSorting.value
+
+			val flow = when {
+				sorting == DomainSongListType.LocalMusic ->
+					localMusicRepository.getSongsFlow(fullRefresh, selectedReversed.value)
+
+				sorting == DomainSongListType.SmartMostPlayed ||
+					sorting == DomainSongListType.SmartOnRepeat ||
+					sorting == DomainSongListType.SmartNeverPlayed ->
+					smartPlaylistManager.getSmartPlaylistSongsFlow(fullRefresh, sorting)
+
+				else ->
+					repository.getSongsFlow(fullRefresh, sorting, selectedReversed.value)
+			}
+
+			flow.collect { songsState.value = it }
+		}
+	}
+
+	fun starSong(isStarred: Boolean) {
+		viewModelScope.launch {
+			val selection = selectedSong.value ?: return@launch
+			runCatching {
+				if (isStarred) {
+					repository.starSong(selection)
+				} else {
+					repository.unstarSong(selection)
+				}
+				starred.value = isStarred
+				refreshSongs(false)
+			}
+		}
+	}
+
+	fun rateSelectedSong(rating: Int) {
+		viewModelScope.launch {
+			val selection = selectedSong.value ?: return@launch
+			runCatching {
+				repository.rateSong(selection, rating)
+				selectedSongRating.value = rating
+			}
+		}
+	}
+
+	fun setSorting(sorting: DomainSongListType) {
+		selectedSorting.value = sorting
+		refreshSongs(false)
+	}
+
+	fun setReversed(reversed: Boolean) {
+		selectedReversed.value = reversed
+		refreshSongs(false)
+	}
+
+	fun clearError() {
+		songsState.value = UiState.Success(songsState.value.data ?: persistentListOf())
+	}
+
+	fun downloadSong(song: DomainSong) {
+		downloadManager.downloadSong(song)
+	}
+
+	fun cancelDownload(songId: String) {
+		downloadManager.cancelDownload(songId)
+	}
+
+	fun deleteDownload(songId: String) {
+		downloadManager.deleteDownload(songId)
+	}
+}

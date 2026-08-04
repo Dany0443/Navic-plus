@@ -1,5 +1,5 @@
 <resources>
-	<string name="app_name" translatable="false">Navic</string>
+	<string name="app_name" translatable="false">Sonora</string>
 
 	<string name="title_library">Library</string>
 	<string name="title_starred">Starred</string>
@@ -31,6 +31,41 @@
 	<string name="title_artists">Artists</string>
 	<string name="title_radios">Radios</string>
 	<string name="title_insights">Insights</string>
+
+	<!-- Insights: providers, onboarding and settings -->
+	<string name="title_insights_settings">Insights</string>
+	<string name="subtitle_insights_settings">Manage your listening statistics provider</string>
+	<string name="title_insights_onboarding">See your listening stats</string>
+	<string name="info_insights_onboarding">Insights can import your listening history from a supported service to show your top artists, tracks, and listening habits.</string>
+	<string name="action_continue_with_lastfm">Continue with Last.fm</string>
+	<string name="action_continue_with_listenbrainz">Continue with ListenBrainz</string>
+	<string name="title_lastfm">Last.fm</string>
+	<string name="title_listenbrainz">ListenBrainz</string>
+	<string name="title_connect_listenbrainz">Connect ListenBrainz</string>
+	<string name="info_connect_listenbrainz">Enter your ListenBrainz username. Your listening statistics are public, so no password or token is needed.</string>
+	<string name="option_listenbrainz_username">Username</string>
+	<string name="option_listenbrainz_server">Server URL</string>
+	<string name="subtitle_listenbrainz_server">Leave blank to use listenbrainz.org</string>
+	<string name="action_use_custom_server">Use a custom server</string>
+	<string name="action_connect">Connect</string>
+	<string name="action_reconnect">Reconnect</string>
+	<string name="title_insights_account">Account</string>
+	<string name="option_insights_provider">Provider</string>
+	<string name="option_insights_account">Connected as</string>
+	<string name="option_insights_server">Server</string>
+	<string name="info_insights_not_connected">Not connected</string>
+	<string name="action_change_provider">Change provider</string>
+	<string name="subtitle_change_provider">Choose a different statistics service</string>
+	<string name="action_disconnect">Disconnect</string>
+	<string name="subtitle_disconnect">Your imported history is kept, so reconnecting later will not need a full resync</string>
+	<string name="title_disconnect_confirm">Disconnect account?</string>
+	<string name="info_disconnect_confirm">Insights will stop showing statistics until you connect a provider again. Your imported listening history is kept.</string>
+	<string name="info_insights_unconfigured">Set up Insights to see your listening statistics.</string>
+	<string name="info_insights_reconnect">Reconnect your account to see your listening statistics.</string>
+	<string name="info_insights_error">Unable to load Insights</string>
+	<string name="info_advanced_statistics_unconfigured">Connect a statistics provider in Insights to see advanced statistics.</string>
+	<string name="action_retry">Retry</string>
+	<string name="action_view_advanced_statistics">View Advanced Statistics</string>
 	<string name="title_all">All</string>
 	<string name="title_similar_artists">Similar artists</string>
 	<string name="title_source">Source code</string>
@@ -83,9 +118,9 @@
 	<string name="subtitle_download_quality">Adjust the quality of downloaded music</string>
 	<string name="subtitle_dynamic_theming">Dynamically theme the album and artist view based on cover art</string>
 	<string name="subtitle_app_icon_designer">Designed by: %1$s</string>
-	<string name="subtitle_local_network_denied">You need to grant Navic access to your local network in order for your server to be reachable.</string>
+	<string name="subtitle_local_network_denied">You need to grant Sonora access to your local network in order for your server to be reachable.</string>
 	<string name="subtitle_enable_local_music">Show music stored on this device.</string>
-	<string name="subtitle_local_music_permission_needed">Navic needs access to your device music library to show Local Music.</string>
+	<string name="subtitle_local_music_permission_needed">Sonora needs access to your device music library to show Local Music.</string>
 	<string name="subtitle_local_music_permission_permanently_denied">Permission is permanently denied. Open app settings to allow Local Music access.</string>
 	<string name="title_local_music">Local Music</string>
 	<string name="subtitle_local_music_collection">All music stored on this device</string>
@@ -373,7 +408,7 @@
 	<string name="notice_queue_duplicate">This song is already in the queue. Do you really want to add it again?</string>
 	<string name="notice_local_network_denied">Permission denied</string>
 
-	<string name="info_app_version">Navic+ %1$s</string>
+	<string name="info_app_version">Sonora %1$s</string>
 	<string name="info_action_is_permanent">This action cannot be undone</string>
 	<string name="info_error">Something went wrong.</string>
 	<string name="info_error_show">Show details</string>
@@ -442,7 +477,7 @@
 	<string name="info_repeat_off">Repeat off</string>
 	<string name="info_repeat_one">Repeat one</string>
 	<string name="info_repeat_all">Repeat all</string>
-	<string name="info_app_icon">Changing the app icon will close Navic as Android requires this. Some icons may look identical on your home screen if your launcher dynamically themes the icon colours.</string>
+	<string name="info_app_icon">Changing the app icon will close Sonora as Android requires this. Some icons may look identical on your home screen if your launcher dynamically themes the icon colours.</string>
 
 	<string name="sideloading_warning_title">STOP, READ!</string>
 	<string name="sideloading_warning_subtitle">Google is planning to kill sideloading for ALL devices with Google Play Services installed!\n</string>

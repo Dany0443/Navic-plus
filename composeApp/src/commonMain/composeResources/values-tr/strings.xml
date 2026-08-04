@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Navic</string>
+    <string name="app_name" translatable="false">Sonora</string>
     <string name="title_library">Kütüphane</string>
     <string name="title_playlists">Çalma Listeleri</string>
     <string name="title_settings">Ayarlar</string>
@@ -134,7 +134,7 @@
     <string name="notice_copied">Panoya kopyalandı.</string>
     <string name="notice_expiry">%1$s içinde süresi dolacak.</string>
     <string name="notice_loading_lyrics">Şarkı sözleri yükleniyor...\nBu biraz zaman alabilir.</string>
-    <string name="info_app_version">Navic+ %1$s</string>
+    <string name="info_app_version">Sonora %1$s</string>
     <string name="info_action_is_permanent">Bu işlem geri alınamaz</string>
     <string name="info_error">Bir şeyler ters gitti.</string>
     <string name="info_error_show">Ayrıntıları göster</string>

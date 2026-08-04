@@ -68,7 +68,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v6
         with:
-          name: navic-release-android
+          name: sonora-release-android
           path: androidApp/build/outputs/apk/**/*.apk
           compression-level: 0
           if-no-files-found: ignore

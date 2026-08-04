@@ -1,0 +1,13 @@
+package dan.sonora.domain.models.settings
+
+import sonora.composeapp.generated.resources.Res
+import sonora.composeapp.generated.resources.option_navigation_bar_label_visibility_always
+import sonora.composeapp.generated.resources.option_navigation_bar_label_visibility_never
+import sonora.composeapp.generated.resources.option_navigation_bar_label_visibility_only_selected
+import org.jetbrains.compose.resources.StringResource
+
+enum class NavigationBarLabelVisibility(val displayName: StringResource) {
+	Always(Res.string.option_navigation_bar_label_visibility_always),
+	OnlySelected(Res.string.option_navigation_bar_label_visibility_only_selected),
+	Never(Res.string.option_navigation_bar_label_visibility_never)
+}
