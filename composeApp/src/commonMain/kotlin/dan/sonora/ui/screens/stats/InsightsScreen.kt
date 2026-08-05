@@ -14,6 +14,7 @@ import sonora.composeapp.generated.resources.Res
 import sonora.composeapp.generated.resources.title_insights
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 import dan.sonora.LocalBottomBarScrollManager
 import dan.sonora.LocalNavStack
 import dan.sonora.ui.components.layouts.RootBottomBar
@@ -27,6 +28,10 @@ import dan.sonora.ui.screens.stats.viewmodels.InsightsViewModel
 @Composable
 fun InsightsScreen(nested: Boolean = false) {
 	val viewModel = koinViewModel<InsightsViewModel>()
+	val player = koinInject<dan.sonora.shared.MediaPlayerViewModel>()
+	val playerState by player.uiState.collectAsState()
+	val hasMiniPlayer = playerState.currentSong != null
+	
 	val state by viewModel.state.collectAsStateWithLifecycle()
 	val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle(initialValue = false)
 	val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle(initialValue = 0f)
@@ -47,11 +52,16 @@ fun InsightsScreen(nested: Boolean = false) {
 			RootBottomBar(scrollManager.isTriggered)
 		}
 	) { paddingValues ->
+		val bottomPadding = if (state is InsightsUiState.NoProvider) {
+			if (hasMiniPlayer) 24.dp else 0.dp
+		} else {
+			32.dp
+		}
 		LazyColumn(
 			modifier = Modifier
 				.fillMaxSize()
 				.padding(paddingValues),
-			contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+			contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomPadding),
 			verticalArrangement = Arrangement.spacedBy(26.dp)
 		) {
 			when (val currentState = state) {
@@ -60,6 +70,9 @@ fun InsightsScreen(nested: Boolean = false) {
 						providers = viewModel.providers,
 						onProviderSelected = { provider ->
 							provider.authorizationUrl?.let(uriHandler::openUri)
+						},
+						onConnectWithUsername = { provider, username, serverUrl ->
+							viewModel.connectWithUsername(provider.id, username, serverUrl)
 						}
 					)
 				}

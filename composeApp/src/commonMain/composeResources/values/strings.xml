@@ -400,6 +400,7 @@
 	<string name="notice_play_next">Playing next.</string>
 	<string name="notice_added_to_playlist">Added to %1$s.</string>
 	<string name="notice_added_to_multiple_playlists">Added to multiple playlists.</string>
+	<string name="notice_lastfm_sign_in_failed">Could not finish signing in to Last.fm. Please try again.</string>
 	<string name="notice_download_started">Download started.</string>
 	<string name="notice_copied">Copied to clipboard.</string>
 	<string name="notice_expiry">Expires in %1$s.</string>

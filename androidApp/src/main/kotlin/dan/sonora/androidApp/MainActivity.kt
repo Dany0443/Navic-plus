@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import dan.sonora.App
 import dan.sonora.data.stats.lastfm.LastFmAuthStore
 import dan.sonora.domain.manager.PermissionManager
+import dan.sonora.domain.manager.SnackBarManager
 
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.core.view.WindowCompat
 class MainActivity : ComponentActivity() {
 	private val lastFmAuthStore: LastFmAuthStore by inject()
 	private val permissionManager: PermissionManager by inject()
+	private val snackBarManager: SnackBarManager by inject()
 
 	/** Holds the system splash until Compose has drawn, so the two never both appear. */
 	private var firstFrameDrawn = false
@@ -85,18 +87,24 @@ class MainActivity : ComponentActivity() {
 	}
 
 	private fun handleIntent(intent: Intent) {
-		intent.data?.getQueryParameter("token")
-			?.takeIf(String::isNotBlank)
-			?.let { token ->
-				lifecycleScope.launch {
-					try {
-						lastFmAuthStore.exchangeTokenForSession(token)
-					} catch (error: CancellationException) {
-						throw error
-					} catch (_: Exception) {
-						// Authentication failures leave the user signed out without exposing request details.
-					}
-				}
+		val token = intent.data?.getQueryParameter("token")?.takeIf(String::isNotBlank) ?: return
+
+		// Last.fm tokens are single use. The activity is singleTop, so without clearing
+		// the data the same token is re-exchanged on every recreation — and the retry
+		// fails, undoing a connection that had already succeeded.
+		intent.data = null
+
+		lifecycleScope.launch {
+			try {
+				lastFmAuthStore.exchangeTokenForSession(token)
+			} catch (error: CancellationException) {
+				throw error
+			} catch (error: Exception) {
+				// Surfaced rather than swallowed: silently discarding this is why a
+				// failed sign-in looked like the callback never arrived. The notice
+				// describes the failure without exposing the token or response body.
+				snackBarManager.notifyLastFmSignInFailed()
 			}
+		}
 	}
 }

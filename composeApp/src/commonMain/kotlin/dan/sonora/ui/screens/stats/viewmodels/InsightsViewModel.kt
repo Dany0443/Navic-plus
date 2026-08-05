@@ -295,4 +295,12 @@ class InsightsViewModel(
 	fun triggerSync() {
 		insightsRepository.syncActiveProvider()
 	}
+
+	/**
+	 * Connects a username-based provider. Suspends so the dialog can show progress and
+	 * report failures, and rethrows so it stays open when the account cannot be verified.
+	 */
+	suspend fun connectWithUsername(providerId: String, username: String, serverUrl: String) {
+		insightsRepository.connectWithUsername(providerId, username, serverUrl)
+	}
 }

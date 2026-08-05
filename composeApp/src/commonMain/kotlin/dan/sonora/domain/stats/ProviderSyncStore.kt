@@ -31,7 +31,29 @@ class ProviderSyncStore(
 
 	fun clear(providerId: String) {
 		settings.remove(key(providerId))
+		settings.remove(backfillKey(providerId))
 		_lastSyncedAt.value = _lastSyncedAt.value - providerId
+	}
+
+	/**
+	 * Whether this provider's history has been imported in full at least once.
+	 *
+	 * Incremental sync asks only for scrobbles newer than the newest one held locally,
+	 * so it can never fill a gap beneath that point. Until a full import has run to
+	 * completion, sync must keep requesting the whole history — otherwise a run that
+	 * fails partway leaves the older half permanently unreachable, because the pages it
+	 * did commit have already moved the watermark forward.
+	 *
+	 * Defaulting to false is deliberate for installs that predate this flag: their cache
+	 * is exactly the one that may be short, so re-importing once repairs it. Rows are
+	 * keyed by (provider, timestamp) and inserted with REPLACE, so a re-import is
+	 * idempotent — it restores what is missing without duplicating what is already there.
+	 */
+	fun isBackfillComplete(providerId: String): Boolean =
+		settings.getBoolean(backfillKey(providerId), false)
+
+	fun setBackfillComplete(providerId: String) {
+		settings[backfillKey(providerId)] = true
 	}
 
 	/** Seeds the observable state from disk so the UI shows timestamps before any sync. */
@@ -42,4 +64,6 @@ class ProviderSyncStore(
 	}
 
 	private fun key(providerId: String) = "statsLastSync_$providerId"
+
+	private fun backfillKey(providerId: String) = "statsBackfillComplete_$providerId"
 }

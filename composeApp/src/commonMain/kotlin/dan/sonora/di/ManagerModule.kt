@@ -6,6 +6,9 @@ import dan.sonora.data.remote.SonoraApi
 import dan.sonora.data.stats.lastfm.LastFmApi
 import dan.sonora.data.stats.lastfm.LastFmAuthStore
 import dan.sonora.data.stats.lastfm.LastFmStatsProvider
+import dan.sonora.data.stats.listenbrainz.ListenBrainzApi
+import dan.sonora.data.stats.listenbrainz.ListenBrainzAuthStore
+import dan.sonora.data.stats.listenbrainz.ListenBrainzStatsProvider
 import dan.sonora.domain.manager.DownloadManager
 import dan.sonora.domain.manager.LoginManager
 import dan.sonora.domain.manager.PreferenceManager
@@ -32,12 +35,18 @@ val managerModule = module {
 	singleOf(::LastFmAuthStore)
 	singleOf(::LastFmApi)
 	singleOf(::LastFmStatsProvider)
+	singleOf(::ListenBrainzAuthStore)
+	singleOf(::ListenBrainzApi)
+	singleOf(::ListenBrainzStatsProvider)
 	singleOf(::ProviderSyncStore)
 	// Registering an additional provider here is all that is needed to surface it in
 	// Insights onboarding and settings — both are generated from this list.
 	single {
 		StatsProviderRegistry(
-			providers = listOf(get<LastFmStatsProvider>()),
+			providers = listOf(
+				get<LastFmStatsProvider>(),
+				get<ListenBrainzStatsProvider>()
+			),
 			preferenceManager = get()
 		)
 	}

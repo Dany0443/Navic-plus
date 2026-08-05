@@ -48,10 +48,20 @@ class InsightsSettingsViewModel(
 	/** Ids of providers currently syncing, so each row shows only its own progress. */
 	val syncingProviders: StateFlow<Set<String>> = insightsRepository.syncingProviders
 
+	/** Why each provider's last sync failed, so a partial import is visible as one. */
+	val syncErrors: StateFlow<Map<String, String>> = insightsRepository.syncErrors
+
 	/** Switching is instant and preserves every provider's cache. */
 	fun setActive(providerId: String) = insightsRepository.setActive(providerId)
 
 	fun sync(providerId: String) = insightsRepository.sync(providerId)
+
+	fun clearSyncError(providerId: String) = insightsRepository.clearSyncError(providerId)
+
+	/** Throws when the account cannot be verified, so the dialog can report why. */
+	suspend fun connectWithUsername(providerId: String, username: String, serverUrl: String) {
+		insightsRepository.connectWithUsername(providerId, username, serverUrl)
+	}
 
 	fun disconnect(providerId: String) {
 		viewModelScope.launch {

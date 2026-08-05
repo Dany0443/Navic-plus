@@ -39,11 +39,13 @@ fun InsightsProviderScreen(providerId: String) {
 	val viewModel = koinViewModel<InsightsSettingsViewModel>()
 	val rows by viewModel.rows.collectAsStateWithLifecycle()
 	val syncing by viewModel.syncingProviders.collectAsStateWithLifecycle()
+	val syncErrors by viewModel.syncErrors.collectAsStateWithLifecycle()
 	val backStack = LocalNavStack.current
 	var confirmDisconnect by remember { mutableStateOf(false) }
 
 	val row = rows.firstOrNull { it.id == providerId }
 	val isSyncing = providerId in syncing
+	val syncError = syncErrors[providerId]
 
 	Scaffold(
 		topBar = { NestedTopBar({ Text(row?.displayName ?: "Provider") }) }
@@ -77,6 +79,17 @@ fun InsightsProviderScreen(providerId: String) {
 
 			if (isSyncing) {
 				LinearProgressIndicator(Modifier.padding(bottom = 16.dp))
+			}
+
+			// A failed sync leaves a partial import behind; saying so is what
+			// distinguishes it from a complete one.
+			syncError?.let { message ->
+				Text(
+					text = "Last sync did not finish: $message",
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.error,
+					modifier = Modifier.padding(bottom = 16.dp, start = 4.dp, end = 4.dp)
+				)
 			}
 
 			FormTitle("Actions")

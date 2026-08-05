@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import sonora.composeapp.generated.resources.Res
 import sonora.composeapp.generated.resources.notice_added_to_queue
+import sonora.composeapp.generated.resources.notice_lastfm_sign_in_failed
 import sonora.composeapp.generated.resources.notice_play_next
 import org.jetbrains.compose.resources.StringResource
 import dan.sonora.domain.models.snackbars.PlayerEvent
@@ -27,4 +28,5 @@ class SnackBarManager {
 
 	fun notifyAddedToQueue() = notify(Res.string.notice_added_to_queue)
 	fun notifyPlayNext() = notify(Res.string.notice_play_next)
+	fun notifyLastFmSignInFailed() = notify(Res.string.notice_lastfm_sign_in_failed)
 }

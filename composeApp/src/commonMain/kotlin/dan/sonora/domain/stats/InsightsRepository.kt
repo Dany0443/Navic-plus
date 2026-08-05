@@ -40,6 +40,9 @@ class InsightsRepository(
 	/** Ids of providers currently syncing. */
 	val syncingProviders: StateFlow<Set<String>> = syncManager.syncingProviders
 
+	/** Why each provider's last sync failed, keyed by provider id. */
+	val syncErrors: StateFlow<Map<String, String>> = syncManager.syncErrors
+
 	val isSyncing: Flow<Boolean> = activeProvider.flatMapLatest { active ->
 		val id = active.id ?: return@flatMapLatest flowOf(false)
 		syncManager.syncingProviders.map { id in it }
@@ -78,6 +81,23 @@ class InsightsRepository(
 	fun syncActiveProvider() = syncManager.syncActiveProvider()
 
 	fun sync(providerId: String) = syncManager.sync(providerId)
+
+	fun clearSyncError(providerId: String) = syncManager.clearError(providerId)
+
+	/**
+	 * Connects a provider that authenticates by username, then syncs it so Insights has
+	 * data to show immediately. Throws if the username cannot be verified, leaving the
+	 * provider disconnected.
+	 */
+	suspend fun connectWithUsername(providerId: String, username: String, serverUrl: String) {
+		val provider = providers.firstOrNull { it.id == providerId }
+		val connectable = provider as? UsernameConnectableProvider
+			?: throw IllegalArgumentException("$providerId does not connect by username")
+
+		connectable.connect(username, serverUrl)
+		registry.setActive(providerId)
+		syncManager.sync(provider)
+	}
 
 	fun setActive(providerId: String) = registry.setActive(providerId)
 
