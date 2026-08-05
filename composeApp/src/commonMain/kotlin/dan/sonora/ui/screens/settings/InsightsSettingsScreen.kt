@@ -33,6 +33,7 @@ import dan.sonora.ui.components.layouts.NestedTopBar
 import dan.sonora.ui.navigation.Screen
 import dan.sonora.ui.screens.settings.viewmodels.InsightsSettingsViewModel
 import dan.sonora.ui.screens.stats.components.UsernameConnectDialog
+import kotlinx.collections.immutable.toImmutableList
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -105,6 +106,31 @@ fun InsightsSettingsScreen() {
 				color = MaterialTheme.colorScheme.onSurfaceVariant,
 				modifier = Modifier.padding(horizontal = 4.dp)
 			)
+
+			Spacer(Modifier.padding(top = 16.dp))
+
+			val autoSyncEnabled by viewModel.autoSyncEnabled.collectAsStateWithLifecycle()
+			val autoSyncInterval by viewModel.autoSyncInterval.collectAsStateWithLifecycle()
+
+			FormTitle("Automatic Synchronization")
+			Form {
+				dan.sonora.ui.screens.settings.components.SettingSwitchRow(
+					title = { Text("Automatic synchronization") },
+					subtitle = { Text("Periodically sync connected providers in the background") },
+					value = autoSyncEnabled,
+					onSetValue = { viewModel.setAutoSyncEnabled(it) }
+				)
+
+				if (autoSyncEnabled) {
+					dan.sonora.ui.screens.settings.components.SettingSelectionRow(
+						title = { Text("Sync interval") },
+						items = dan.sonora.domain.models.settings.InsightsSyncInterval.entries.toImmutableList(),
+						label = { it.displayName },
+						selection = autoSyncInterval,
+						onSelect = { viewModel.setAutoSyncInterval(it) }
+					)
+				}
+			}
 		}
 	}
 

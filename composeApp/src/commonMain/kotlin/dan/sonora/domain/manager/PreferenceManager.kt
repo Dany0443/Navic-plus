@@ -146,6 +146,8 @@ class PreferenceManager(
 
 	// sync related settings
 	var lastFullSyncTime by preference(0L)
+	var insightsAutoSyncEnabled by preference(true)
+	var insightsAutoSyncIntervalMinutes by preference(30L)
 
 	fun customHeadersMap(): Map<String, String> = buildMap {
 		for (line in customHeaders.lines()) {

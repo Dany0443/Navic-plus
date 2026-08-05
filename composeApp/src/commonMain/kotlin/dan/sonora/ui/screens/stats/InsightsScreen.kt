@@ -24,13 +24,13 @@ import dan.sonora.ui.screens.stats.components.*
 import dan.sonora.ui.screens.stats.viewmodels.InsightsUiState
 import dan.sonora.ui.screens.stats.viewmodels.InsightsViewModel
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import dan.sonora.util.ui.withoutTop
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InsightsScreen(nested: Boolean = false) {
 	val viewModel = koinViewModel<InsightsViewModel>()
-	val player = koinInject<dan.sonora.shared.MediaPlayerViewModel>()
-	val playerState by player.uiState.collectAsState()
-	val hasMiniPlayer = playerState.currentSong != null
 	
 	val state by viewModel.state.collectAsStateWithLifecycle()
 	val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle(initialValue = false)
@@ -52,16 +52,12 @@ fun InsightsScreen(nested: Boolean = false) {
 			RootBottomBar(scrollManager.isTriggered)
 		}
 	) { paddingValues ->
-		val bottomPadding = if (state is InsightsUiState.NoProvider) {
-			if (hasMiniPlayer) 24.dp else 0.dp
-		} else {
-			32.dp
-		}
 		LazyColumn(
 			modifier = Modifier
 				.fillMaxSize()
-				.padding(paddingValues),
-			contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomPadding),
+				.padding(top = paddingValues.calculateTopPadding())
+				.nestedScroll(scrollBehavior.nestedScrollConnection),
+			contentPadding = paddingValues.withoutTop() + PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 26.dp),
 			verticalArrangement = Arrangement.spacedBy(26.dp)
 		) {
 			when (val currentState = state) {

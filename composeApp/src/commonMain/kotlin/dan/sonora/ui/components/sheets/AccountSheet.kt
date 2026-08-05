@@ -20,11 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kyant.capsule.ContinuousCapsule
@@ -32,24 +28,18 @@ import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
 import sonora.composeapp.generated.resources.Res
 import sonora.composeapp.generated.resources.action_log_out
-import sonora.composeapp.generated.resources.action_sleep_timer
-import sonora.composeapp.generated.resources.action_sleep_timer_enabled
 import sonora.composeapp.generated.resources.action_view_shares
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import dan.sonora.LocalNavStack
 import dan.sonora.domain.manager.LoginManager
-import dan.sonora.domain.manager.SleepTimerManager
 import dan.sonora.icons.Icons
-import dan.sonora.icons.outlined.Bedtime
 import dan.sonora.icons.outlined.Logout
 import dan.sonora.icons.outlined.Share
 import dan.sonora.ui.components.common.Form
 import dan.sonora.ui.components.common.FormRow
 import dan.sonora.ui.components.common.Monogram
 import dan.sonora.ui.navigation.Screen
-import dan.sonora.ui.theme.positive
-import dan.sonora.util.core.label
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,10 +49,6 @@ fun AccountSheet(
 	val backStack = LocalNavStack.current
 	val loginManager = koinInject<LoginManager>()
 	val settings = koinInject<Settings>()
-
-	var sleepTimerSheetOpen by rememberSaveable { mutableStateOf(false) }
-	val sleepTimerManager = koinInject<SleepTimerManager>()
-	val sleepTimerLeft = sleepTimerManager.timeLeft
 
 	val sheetState = rememberBottomSheetState(
 		initialValue = SheetValue.Hidden,
@@ -153,41 +139,6 @@ fun AccountSheet(
 
 				FormRow(
 					onClick = {
-						sleepTimerSheetOpen = true
-					},
-					horizontalArrangement = horizontalArrangement,
-					contentPadding = contentPadding,
-					color = color
-				) {
-					if (sleepTimerLeft != null) {
-						Icon(
-							imageVector = Icons.Outlined.Bedtime,
-							contentDescription = null,
-							tint = MaterialTheme.colorScheme.positive
-						)
-						Text(
-							text = stringResource(
-								resource = Res.string.action_sleep_timer_enabled,
-								sleepTimerLeft.label()
-							),
-							color = MaterialTheme.colorScheme.positive,
-							modifier = Modifier.weight(1f)
-						)
-					} else {
-						Icon(
-							imageVector = Icons.Outlined.Bedtime,
-							contentDescription = null,
-							tint = MaterialTheme.colorScheme.onSurfaceVariant
-						)
-						Text(
-							text = stringResource(Res.string.action_sleep_timer),
-							modifier = Modifier.weight(1f)
-						)
-					}
-				}
-
-				FormRow(
-					onClick = {
 						animateToDismiss()
 						loginManager.logout()
 						backStack.clear()
@@ -206,9 +157,5 @@ fun AccountSheet(
 				}
 			}
 		}
-	}
-
-	if (sleepTimerSheetOpen) {
-		SleepTimerSheet(onDismissRequest = { sleepTimerSheetOpen = false })
 	}
 }

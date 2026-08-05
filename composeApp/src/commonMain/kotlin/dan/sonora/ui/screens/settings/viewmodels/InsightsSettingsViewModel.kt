@@ -5,8 +5,13 @@ import androidx.lifecycle.viewModelScope
 import dan.sonora.domain.stats.InsightsRepository
 import dan.sonora.domain.stats.StatsProvider
 import dan.sonora.domain.stats.id
+import dan.sonora.domain.manager.InsightsAutoSyncScheduler
+import dan.sonora.domain.manager.PreferenceManager
+import dan.sonora.domain.models.settings.InsightsSyncInterval
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,10 +26,20 @@ data class ProviderRow(
 )
 
 class InsightsSettingsViewModel(
-	private val insightsRepository: InsightsRepository
+	private val insightsRepository: InsightsRepository,
+	private val preferenceManager: PreferenceManager,
+	private val autoSyncScheduler: InsightsAutoSyncScheduler
 ) : ViewModel() {
 
 	private val providers: List<StatsProvider> = insightsRepository.providers
+
+	private val _autoSyncEnabled = MutableStateFlow(preferenceManager.insightsAutoSyncEnabled)
+	val autoSyncEnabled: StateFlow<Boolean> = _autoSyncEnabled.asStateFlow()
+
+	private val _autoSyncInterval = MutableStateFlow(
+		InsightsSyncInterval.fromMinutes(preferenceManager.insightsAutoSyncIntervalMinutes)
+	)
+	val autoSyncInterval: StateFlow<InsightsSyncInterval> = _autoSyncInterval.asStateFlow()
 
 	val rows: StateFlow<List<ProviderRow>> = combine(
 		combine(providers.map { it.isConnected }) { it.toList() },
@@ -50,6 +65,18 @@ class InsightsSettingsViewModel(
 
 	/** Why each provider's last sync failed, so a partial import is visible as one. */
 	val syncErrors: StateFlow<Map<String, String>> = insightsRepository.syncErrors
+
+	fun setAutoSyncEnabled(enabled: Boolean) {
+		preferenceManager.insightsAutoSyncEnabled = enabled
+		_autoSyncEnabled.value = enabled
+		autoSyncScheduler.scheduleAutoSync(enabled, preferenceManager.insightsAutoSyncIntervalMinutes)
+	}
+
+	fun setAutoSyncInterval(interval: InsightsSyncInterval) {
+		preferenceManager.insightsAutoSyncIntervalMinutes = interval.minutes
+		_autoSyncInterval.value = interval
+		autoSyncScheduler.scheduleAutoSync(preferenceManager.insightsAutoSyncEnabled, interval.minutes)
+	}
 
 	/** Switching is instant and preserves every provider's cache. */
 	fun setActive(providerId: String) = insightsRepository.setActive(providerId)

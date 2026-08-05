@@ -53,10 +53,13 @@ class ScrobbleSyncManager(
 	}
 
 	fun sync(provider: StatsProvider) {
-		if (provider.id in _syncingProviders.value || !provider.isConnected.value) return
+		if (!provider.isConnected.value) return
+		synchronized(this) {
+			if (provider.id in _syncingProviders.value) return
+			_syncingProviders.value = _syncingProviders.value + provider.id
+		}
 
 		scope.launch(Dispatchers.IO) {
-			_syncingProviders.value = _syncingProviders.value + provider.id
 			_syncProgress.value = _syncProgress.value + (provider.id to 0f)
 			_syncErrors.value = _syncErrors.value - provider.id
 			try {
@@ -72,8 +75,10 @@ class ScrobbleSyncManager(
 					null
 				}
 				var cursor: String? = null
+				var pageNumber = 0
 
 				do {
+					pageNumber++
 					val page = provider.getRecentScrobbles(since = since, cursor = cursor)
 
 					val entities = page.scrobbles.map { scrobble ->
@@ -87,12 +92,26 @@ class ScrobbleSyncManager(
 							coverArtUrl = null
 						)
 					}
+					var insertedCount = 0
 					if (entities.isNotEmpty()) {
 						scrobbleDao.insertScrobbles(entities)
+						insertedCount = entities.size
 					}
 
 					_syncProgress.value = _syncProgress.value + (provider.id to page.progress)
-					cursor = page.nextCursor
+					val nextCursor = page.nextCursor
+
+					val oldestTs = page.scrobbles.minOfOrNull { it.timestamp }
+					val newestTs = page.scrobbles.maxOfOrNull { it.timestamp }
+					val progressPct = (page.progress * 100).toInt()
+					val termReason = if (nextCursor == null) "End of history reached (nextCursor is null)" else "More pages available"
+
+					dan.sonora.util.core.Logger.i(
+						"ScrobbleSyncManager",
+						"[Sync Page] Provider: ${provider.id} | Page: $pageNumber | Oldest TS: $oldestTs | Newest TS: $newestTs | Listens: ${page.scrobbles.size} | Inserts: $insertedCount | Progress: $progressPct% | Termination: $termReason"
+					)
+
+					cursor = nextCursor
 				} while (cursor != null)
 
 				// Only reached when every page was walked without throwing, which is

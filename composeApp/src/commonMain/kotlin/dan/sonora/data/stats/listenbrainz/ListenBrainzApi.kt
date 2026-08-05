@@ -1,5 +1,6 @@
 package dan.sonora.data.stats.listenbrainz
 
+import dan.sonora.util.core.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestBuilder
@@ -9,6 +10,10 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.time.Clock
 import kotlinx.serialization.json.Json
 
 class ListenBrainzApiException(message: String) : Exception(message)
@@ -40,7 +45,9 @@ class ListenBrainzApi(
 	 * nothing has been persisted yet.
 	 */
 	suspend fun userExists(username: String, serverUrl: String): Boolean {
-		val response = client.get("${serverUrl.normalizeServerUrl()}/1/user/$username/listen-count")
+		val url = "${serverUrl.normalizeServerUrl()}/1/user/$username/listen-count"
+		logRequest(url, username)
+		val response = executeWithRetry { client.get(url) }
 		return when {
 			response.status.isSuccess() -> true
 			response.status == HttpStatusCode.NotFound -> false
@@ -86,7 +93,11 @@ class ListenBrainzApi(
 		path: String,
 		noinline block: HttpRequestBuilder.() -> Unit = {}
 	): T {
-		val response = client.get("${authStore.serverUrl}$path") { block() }
+		val fullUrl = "${authStore.serverUrl}$path"
+		logRequest(fullUrl, authStore.username)
+		val response = executeWithRetry {
+			client.get(fullUrl) { block() }
+		}
 
 		if (response.status == HttpStatusCode.NotFound) {
 			throw ListenBrainzUnknownUserException(authStore.username.orEmpty())
@@ -102,12 +113,89 @@ class ListenBrainzApi(
 		return json.decodeFromString<T>(response.bodyAsText())
 	}
 
+	private val rateLimitMutex = Mutex()
+	private var nextAllowedTimeMs: Long = 0L
+
+	private suspend fun awaitRateLimit() {
+		val waitMs = rateLimitMutex.withLock {
+			val now = Clock.System.now().toEpochMilliseconds()
+			val wait = nextAllowedTimeMs - now
+			if (wait > 0) wait else 0L
+		}
+		if (waitMs > 0) {
+			Logger.i("ListenBrainzApi", "Pacing request according to rate-limit headers: waiting ${waitMs}ms")
+			delay(waitMs)
+		}
+	}
+
+	private suspend fun updateRateLimitsFromHeaders(response: HttpResponse) = rateLimitMutex.withLock {
+		val remaining = response.headers["X-RateLimit-Remaining"]?.toIntOrNull()
+			?: response.headers["x-ratelimit-remaining"]?.toIntOrNull()
+		val resetInSec = response.headers["X-RateLimit-Reset-In"]?.toDoubleOrNull()
+			?: response.headers["x-ratelimit-reset-in"]?.toDoubleOrNull()
+
+		if (remaining != null && remaining <= 0) {
+			val waitSec = resetInSec ?: 1.0
+			val delayMs = (waitSec * 1000.0).toLong().coerceAtLeast(100L)
+			val targetTimeMs = Clock.System.now().toEpochMilliseconds() + delayMs
+			if (targetTimeMs > nextAllowedTimeMs) {
+				nextAllowedTimeMs = targetTimeMs
+				Logger.w(
+					"ListenBrainzApi",
+					"Rate limit window exhausted (remaining=$remaining). Next request throttled for ${delayMs}ms"
+				)
+			}
+		}
+	}
+
+	private suspend fun executeWithRetry(
+		maxRetries: Int = 3,
+		block: suspend () -> HttpResponse
+	): HttpResponse {
+		var attempt = 0
+		var delayMs = 2000L
+		while (true) {
+			awaitRateLimit()
+			val response = block()
+			updateRateLimitsFromHeaders(response)
+			if (response.status == HttpStatusCode.TooManyRequests && attempt < maxRetries) {
+				attempt++
+				val retryAfterHeader = response.headers["Retry-After"]?.toLongOrNull()
+					?: response.headers["retry-after"]?.toLongOrNull()
+				val waitMs = if (retryAfterHeader != null && retryAfterHeader > 0) {
+					retryAfterHeader * 1000L
+				} else {
+					delayMs
+				}
+				Logger.w(
+					"ListenBrainzApi",
+					"HTTP 429 received. Retrying attempt $attempt/$maxRetries after ${waitMs}ms"
+				)
+				delay(waitMs)
+				delayMs *= 2
+			} else {
+				return response
+			}
+		}
+	}
+
+	private fun logRequest(url: String, username: String?) {
+		val timestamp = Clock.System.now().toString()
+		val caller = Throwable().stackTrace
+			.firstOrNull { it.className.startsWith("dan.sonora") && !it.className.endsWith("ListenBrainzApi") }
+			?.let { "${it.className}.${it.methodName}:${it.lineNumber}" } ?: "unknown"
+		Logger.i(
+			"ListenBrainzApi",
+			"[ListenBrainz Request] Endpoint: $url | User: $username | Timestamp: $timestamp | Caller: $caller"
+		)
+	}
+
 	private fun requireUser(): String =
 		authStore.username ?: error("ListenBrainz has not been connected")
 
 	internal companion object {
-		/** ListenBrainz's maximum listens per request. */
-		const val PAGE_SIZE = 1000
+		/** ListenBrainz's maximum listens per request (server caps count to 100). */
+		const val PAGE_SIZE = 100
 		private const val STATS_COUNT = 100
 
 		/** Deserializes to the empty case of every response type used here. */
@@ -116,3 +204,4 @@ class ListenBrainzApi(
 }
 
 private fun HttpStatusCode.isSuccess(): Boolean = value in 200..299
+

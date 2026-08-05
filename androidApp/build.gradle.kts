@@ -20,10 +20,7 @@ val versionPrereleaseVersion = project.property("versionPrereleaseVersion").toSt
 fun buildVersionName(): String = buildString {
     append("$versionMajor.$versionMinor.$versionPatch")
     if (versionPrerelease.isNotBlank()) {
-        append(" ${versionPrerelease.replaceFirstChar { it.uppercaseChar() }}")
-        if (versionPrereleaseVersion > 0) {
-            append(" $versionPrereleaseVersion")
-        }
+        append("-$versionPrerelease")
     }
 }
 
@@ -64,7 +61,7 @@ val envSigningInfo = SigningInfo(
 )
 
 val resolvedSigningInfo = SigningInfo(
-    storeFile = envSigningInfo.storeFile ?: keystoreProperties.getProperty("storeFile")?.let(::File),
+    storeFile = envSigningInfo.storeFile ?: keystoreProperties.getProperty("storeFile")?.let { rootProject.file(it) },
     storePassword = envSigningInfo.storePassword ?: keystoreProperties.getProperty("storePassword"),
     keyAlias = envSigningInfo.keyAlias ?: keystoreProperties.getProperty("keyAlias"),
     keyPassword = envSigningInfo.keyPassword ?: keystoreProperties.getProperty("keyPassword"),
@@ -173,12 +170,16 @@ extensions.configure<ApplicationExtension> {
     }
 }
 
-// Name each variant's APK after its build type, e.g. Sonora-release.apk.
+// Name each variant's APK after its version, e.g. Sonora-v1.5.2-RC2.apk.
 extensions.configure<ApplicationAndroidComponentsExtension> {
     onVariants { variant ->
         variant.outputs.forEach { output ->
             if (output is VariantOutputImpl) {
-                output.outputFileName = "Sonora-${variant.buildType}.apk"
+                output.outputFileName = if (variant.buildType == "release") {
+                    "Sonora-v${buildVersionName()}.apk"
+                } else {
+                    "Sonora-${variant.buildType}.apk"
+                }
             }
         }
     }
@@ -188,6 +189,7 @@ dependencies {
     implementation(projects.composeApp)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.cmp.material3)
     implementation(libs.koin.android)
     implementation(libs.koin.core)

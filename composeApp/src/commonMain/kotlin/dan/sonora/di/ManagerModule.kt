@@ -31,6 +31,12 @@ val managerModule = module {
 			startPeriodicSync()
 		}
 	}
+	single(createdAtStart = true) {
+		get<dan.sonora.domain.manager.InsightsAutoSyncScheduler>().scheduleAutoSync(
+			get<PreferenceManager>().insightsAutoSyncEnabled,
+			get<PreferenceManager>().insightsAutoSyncIntervalMinutes
+		)
+	}
 	singleOf(::DownloadManager)
 	singleOf(::LastFmAuthStore)
 	singleOf(::LastFmApi)

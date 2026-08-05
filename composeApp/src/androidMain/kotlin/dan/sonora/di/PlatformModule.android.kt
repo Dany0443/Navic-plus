@@ -10,6 +10,7 @@ import dan.sonora.data.database.DownloadDatabase
 import dan.sonora.domain.manager.AppIconManager
 import dan.sonora.domain.manager.ConnectivityManager
 import dan.sonora.domain.manager.EqualizerSettingsUpdater
+import dan.sonora.domain.manager.InsightsAutoSyncScheduler
 import dan.sonora.domain.manager.LogManager
 import dan.sonora.domain.manager.PermissionManager
 import dan.sonora.domain.manager.PreferenceManager
@@ -75,6 +76,7 @@ actual val platformModule = module {
 	single { LocalMusicScanner(get()) }
 	singleOf(::AppIconManager)
 	singleOf(::PermissionManager)
+	single { InsightsAutoSyncScheduler(androidApplication()) }
 	single {
 		EqualizerSettingsProvider(
 			initialSettings = get<PreferenceManager>().equalizerSettings,
