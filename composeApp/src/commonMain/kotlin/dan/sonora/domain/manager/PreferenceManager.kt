@@ -110,6 +110,9 @@ class PreferenceManager(
 	var customDownloadMaxBitrateCellular by preference(0)
 	var customDownloadFormatWifi by preference("")
 	var customDownloadFormatCellular by preference("")
+	var autoCacheStarredWifi by preference(true)
+	var autoCachePlayedSongs by preference(true)
+	var maxMediaCacheSizeMb by preference(2048L)
 
 	var nowPlayingToolbarPosition by preference(ToolbarPosition.Bottom)
 	var nowPlayingSongInfo by preference(true)

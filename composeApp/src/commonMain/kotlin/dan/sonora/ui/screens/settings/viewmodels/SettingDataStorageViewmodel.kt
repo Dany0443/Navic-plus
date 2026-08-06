@@ -16,13 +16,16 @@ import dan.sonora.domain.manager.SyncManager
 import dan.sonora.domain.repositories.DbRepository
 import dan.sonora.domain.repositories.SongRepository
 
+import dan.sonora.domain.manager.PlaybackCacheManager
+
 class SettingsDataStorageViewModel(
 	private val syncManager: SyncManager,
 	private val dbRepository: DbRepository,
 	private val syncDao: SyncActionDao,
 	private val downloadManager: DownloadManager,
 	private val songRepository: SongRepository,
-	connectivityManager: ConnectivityManager
+	connectivityManager: ConnectivityManager,
+	private val playbackCacheManager: PlaybackCacheManager
 ) : ViewModel() {
 
 	val syncState = syncManager.syncState
@@ -45,9 +48,15 @@ class SettingsDataStorageViewModel(
 	val isDownloadingLibrary = downloadManager.isDownloadingLibrary
 	val libraryDownloadProgress = downloadManager.libraryDownloadProgress
 	val isOnline = connectivityManager.isOnline
+	val playbackCacheSizeFormatted = playbackCacheManager.cacheSizeFormatted
 
 	init {
 		loadPendingActions()
+		playbackCacheManager.refreshCacheSize()
+	}
+
+	fun clearPlaybackCache() {
+		playbackCacheManager.clearCache()
 	}
 
 	private fun loadPendingActions() {

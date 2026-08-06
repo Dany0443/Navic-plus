@@ -14,6 +14,7 @@ import dan.sonora.domain.manager.InsightsAutoSyncScheduler
 import dan.sonora.domain.manager.LibrarySyncEnqueuer
 import dan.sonora.domain.manager.LogManager
 import dan.sonora.domain.manager.PermissionManager
+import dan.sonora.domain.manager.PlaybackCacheManager
 import dan.sonora.domain.manager.PreferenceManager
 import dan.sonora.domain.manager.ShareManager
 import dan.sonora.domain.manager.StorageManager
@@ -75,8 +76,16 @@ actual val platformModule = module {
 	single { LocalMusicScanner(get()) }
 	singleOf(::AppIconManager)
 	singleOf(::PermissionManager)
+	singleOf(::PlaybackCacheManager)
 	single { InsightsAutoSyncScheduler(androidApplication()) }
 	single<LibrarySyncEnqueuer> { AndroidLibrarySyncEnqueuer(androidApplication()) }
+	single<dan.sonora.domain.manager.AutoCacheStarredScheduler> {
+		dan.sonora.domain.manager.AndroidAutoCacheStarredScheduler(androidApplication()).also { scheduler ->
+			if (get<PreferenceManager>().autoCacheStarredWifi) {
+				scheduler.schedule()
+			}
+		}
+	}
 	single {
 		EqualizerSettingsProvider(
 			initialSettings = get<PreferenceManager>().equalizerSettings,

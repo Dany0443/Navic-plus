@@ -104,6 +104,7 @@ import dan.sonora.ui.components.dialogs.BulkDownloadDialog
 import dan.sonora.ui.components.layouts.NestedTopBar
 import dan.sonora.ui.navigation.Screen
 import dan.sonora.ui.screens.settings.components.SettingSelectionRow
+import dan.sonora.ui.screens.settings.components.SettingSwitchRow
 import dan.sonora.ui.screens.settings.viewmodels.SettingsDataStorageViewModel
 import androidx.lifecycle.compose.dropUnlessResumed
 import sonora.composeapp.generated.resources.subtitle_download_quality
@@ -118,6 +119,7 @@ fun SettingsDataStorageScreen() {
 	val platformContext = LocalPlatformContext.current
 	val backStack = LocalNavStack.current
 	val preferenceManager = koinInject<PreferenceManager>()
+	val autoCacheScheduler = koinInject<dan.sonora.domain.manager.AutoCacheStarredScheduler>()
 	val scope = rememberCoroutineScope()
 	val coilPlatformContext = LocalCoilPlatformContext.current
 	val imageLoader = SingletonImageLoader.get(coilPlatformContext)
@@ -126,6 +128,7 @@ fun SettingsDataStorageScreen() {
 	val pendingActionCount by viewModel.pendingActionCount.collectAsStateWithLifecycle()
 	val downloadCount by viewModel.downloadCount.collectAsStateWithLifecycle(0)
 	val downloadSize by viewModel.downloadSize.collectAsStateWithLifecycle(0L)
+	val playbackCacheSize by viewModel.playbackCacheSizeFormatted.collectAsStateWithLifecycle()
 
 	var showLibraryDownloadDialog by remember { mutableStateOf(false) }
 	val isDownloadingLibrary by viewModel.isDownloadingLibrary.collectAsStateWithLifecycle()
@@ -242,6 +245,32 @@ fun SettingsDataStorageScreen() {
 							}
 						}
 					)
+					SettingSwitchRow(
+						title = { Text("Auto-cache Starred Songs on Wi-Fi") },
+						subtitle = { Text("Automatically background download starred tracks when connected to unmetered Wi-Fi") },
+						value = preferenceManager.autoCacheStarredWifi,
+						onSetValue = { enabled ->
+							preferenceManager.autoCacheStarredWifi = enabled
+							if (enabled) autoCacheScheduler.schedule() else autoCacheScheduler.cancel()
+						}
+					)
+					SettingSwitchRow(
+						title = { Text("Auto-cache Played Songs") },
+						subtitle = { Text("Automatically save played tracks locally to save data on repeat plays") },
+						value = preferenceManager.autoCachePlayedSongs,
+						onSetValue = { enabled ->
+							preferenceManager.autoCachePlayedSongs = enabled
+						}
+					)
+					SettingSelectionRow(
+						title = { Text("Max Playback Cache Limit") },
+						items = MaxCacheLimitOption.entries.toImmutableList(),
+						label = { it.displayName },
+						selection = MaxCacheLimitOption.fromMb(preferenceManager.maxMediaCacheSizeMb),
+						onSelect = { option ->
+							preferenceManager.maxMediaCacheSizeMb = option.sizeMb
+						}
+					)
 				}
 
 				FormTitle(stringResource(Res.string.title_sync_control))
@@ -356,6 +385,17 @@ fun SettingsDataStorageScreen() {
 						}
 					}
 
+					FormRow {
+						Column(Modifier.weight(1f)) {
+							Text("Playback Cache Size")
+							Text(
+								playbackCacheSize,
+								style = MaterialTheme.typography.bodyMedium,
+								color = MaterialTheme.colorScheme.onSurfaceVariant
+							)
+						}
+					}
+
 					FormRow(
 						modifier = offlineModifier,
 						onClick = if (!isDownloadingLibrary && isOnline) {
@@ -456,6 +496,13 @@ fun SettingsDataStorageScreen() {
 						)
 					}
 
+					FormRow(onClick = { viewModel.clearPlaybackCache() }) {
+						Text(
+							"Clear Playback Cache",
+							color = MaterialTheme.colorScheme.error
+						)
+					}
+
 					FormRow(
 						modifier = offlineModifier,
 						onClick = if (isOnline) {
@@ -502,5 +549,17 @@ private fun Instant.toRelativeString(
 				.replace($$"%1$d", date.day.toString())
 				.replace($$"%1$s", monthName)
 		}
+	}
+}
+
+private enum class MaxCacheLimitOption(val sizeMb: Long, val displayName: String) {
+	Mb500(500L, "500 MB"),
+	Gb1(1024L, "1 GB"),
+	Gb2(2048L, "2 GB"),
+	Gb5(5120L, "5 GB"),
+	Unlimited(0L, "Unlimited");
+
+	companion object {
+		fun fromMb(mb: Long): MaxCacheLimitOption = entries.firstOrNull { it.sizeMb == mb } ?: Gb2
 	}
 }

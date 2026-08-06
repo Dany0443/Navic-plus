@@ -10,6 +10,7 @@ import dan.sonora.data.stats.listenbrainz.ListenBrainzApi
 import dan.sonora.data.stats.listenbrainz.ListenBrainzAuthStore
 import dan.sonora.data.stats.listenbrainz.ListenBrainzStatsProvider
 import dan.sonora.domain.manager.DownloadManager
+import dan.sonora.domain.manager.DownloadNetworkPolicy
 import dan.sonora.domain.manager.LoginManager
 import dan.sonora.domain.manager.PreferenceManager
 import dan.sonora.domain.manager.ScrobbleSyncManager
@@ -38,6 +39,7 @@ val managerModule = module {
 		)
 	}
 	singleOf(::DownloadManager)
+	singleOf(::DownloadNetworkPolicy)
 	singleOf(::LastFmAuthStore)
 	singleOf(::LastFmApi)
 	singleOf(::LastFmStatsProvider)

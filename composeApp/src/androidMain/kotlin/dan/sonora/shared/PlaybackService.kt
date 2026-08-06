@@ -31,6 +31,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import dan.sonora.domain.manager.AndroidScrobbleManager
 import dan.sonora.domain.manager.ConnectivityManager
+import dan.sonora.domain.manager.PlaybackCacheManager
 import dan.sonora.domain.manager.PreferenceManager
 import dan.sonora.domain.manager.SessionManager
 import dan.sonora.domain.manager.SyncManager
@@ -39,6 +40,7 @@ import dan.sonora.shared.playback.EqualizerSettingsProvider
 import dan.sonora.shared.playback.SonoraAudioRenderersFactory
 import dan.sonora.shared.playback.PlaybackEngine
 import dan.sonora.util.core.ResourceProvider
+import androidx.media3.datasource.cache.CacheDataSource
 
 /**
  * The `MediaSessionService` host for playback.
@@ -64,6 +66,7 @@ class PlaybackService : MediaSessionService(), KoinComponent {
 	private val sessionManager: SessionManager by inject()
 	private val preferenceManager: PreferenceManager by inject()
 	private val equalizerSettingsProvider: EqualizerSettingsProvider by inject()
+	private val playbackCacheManager: PlaybackCacheManager by inject()
 
 	override fun onCreate() {
 		super.onCreate()
@@ -116,8 +119,17 @@ class PlaybackService : MediaSessionService(), KoinComponent {
 	private fun createPlayerFactory(): ExoPlayerFactory {
 		val httpDataSourceFactory = DefaultHttpDataSource.Factory()
 			.setDefaultRequestProperties(preferenceManager.customHeadersMap())
-		val dataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
-		val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
+		val effectiveDataSourceFactory = if (preferenceManager.autoCachePlayedSongs) {
+			val simpleCache = playbackCacheManager.getOrCreateSimpleCache()
+			val cacheDataSourceFactory = CacheDataSource.Factory()
+				.setCache(simpleCache)
+				.setUpstreamDataSourceFactory(httpDataSourceFactory)
+				.setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+			DefaultDataSource.Factory(this, cacheDataSourceFactory)
+		} else {
+			DefaultDataSource.Factory(this, httpDataSourceFactory)
+		}
+		val mediaSourceFactory = DefaultMediaSourceFactory(effectiveDataSourceFactory)
 
 		val audioAttributes = AudioAttributes.Builder()
 			.setUsage(C.USAGE_MEDIA)
