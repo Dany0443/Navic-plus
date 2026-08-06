@@ -42,6 +42,8 @@ import dan.sonora.domain.repositories.LyricsRepository
 import dan.sonora.util.core.Logger
 import coil3.PlatformContext as CoilPlatformContext
 
+import dan.sonora.domain.manager.PlaybackCacheManager
+
 class DownloadManager(
 	private val coilPlatformContext: CoilPlatformContext,
 	private val downloadDao: DownloadDao,
@@ -51,7 +53,8 @@ class DownloadManager(
 	private val lyricDao: LyricDao,
 	private val sessionManager: SessionManager,
 	private val preferenceManager: PreferenceManager,
-	private val connectivityManager: ConnectivityManager
+	private val connectivityManager: ConnectivityManager,
+	private val playbackCacheManager: PlaybackCacheManager
 ) {
 	private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 	private val client = HttpClient {
@@ -359,6 +362,22 @@ class DownloadManager(
 
 		val extension = container?.takeIf { it.isNotBlank() } ?: song.fileExtension
 
+		if (playbackCacheManager.isFullyCached(song.id)) {
+			val path = storageManager.getDownloadPath(song.id, extension)
+			if (playbackCacheManager.exportFullCacheToFile(song.id, path)) {
+				downloadDao.insertDownload(
+					DownloadEntity(
+						song.id,
+						DownloadStatus.DOWNLOADED,
+						1f,
+						path
+					)
+				)
+				Logger.i("DownloadManager", "Promoted full playback stream cache to permanent download for ${song.id}")
+				return
+			}
+		}
+
 		val request = client.prepareRequest(
 			sessionManager.api.getStreamUrl(
 				id = song.id,
@@ -406,6 +425,7 @@ class DownloadManager(
 					path
 				)
 			)
+			playbackCacheManager.evictIncompleteCache(song.id)
 		}
 	}
 }

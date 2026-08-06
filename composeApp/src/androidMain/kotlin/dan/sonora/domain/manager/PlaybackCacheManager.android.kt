@@ -83,6 +83,32 @@ actual class PlaybackCacheManager(
 		}
 	}
 
+	actual fun exportFullCacheToFile(songId: String, targetFilePath: String): Boolean {
+		val cache = simpleCache ?: return false
+		if (!isFullyCached(songId)) return false
+		val key = "subsonic_song_$songId"
+		val spans = cache.getCachedSpans(key)
+		if (spans.isEmpty()) return false
+		return try {
+			val targetFile = File(targetFilePath)
+			targetFile.parentFile?.mkdirs()
+			targetFile.outputStream().use { outStream ->
+				for (span in spans.sortedBy { it.position }) {
+					val spanFile = span.file ?: continue
+					spanFile.inputStream().use { inStream ->
+						inStream.copyTo(outStream)
+					}
+				}
+			}
+			evictIncompleteCache(songId)
+			Logger.i("PlaybackCacheManager", "Promoted full stream cache for $songId to permanent download at $targetFilePath")
+			true
+		} catch (e: Exception) {
+			Logger.e("PlaybackCacheManager", "Failed to promote full stream cache for $songId", e)
+			false
+		}
+	}
+
 	fun purgeAllIncompleteCaches() {
 		val cache = simpleCache ?: return
 		try {

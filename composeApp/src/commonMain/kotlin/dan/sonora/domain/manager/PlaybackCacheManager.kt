@@ -9,4 +9,5 @@ expect class PlaybackCacheManager {
 	fun isTrackCached(songId: String): Boolean
 	fun isFullyCached(songId: String): Boolean
 	fun evictIncompleteCache(songId: String)
+	fun exportFullCacheToFile(songId: String, targetFilePath: String): Boolean
 }

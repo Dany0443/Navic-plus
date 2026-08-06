@@ -14,6 +14,7 @@ import dan.sonora.data.database.dao.SongDao
 import dan.sonora.data.database.mappers.toDomainModel
 import dan.sonora.util.core.Logger
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.util.concurrent.TimeUnit
@@ -41,7 +42,7 @@ class AutoCacheStarredWorker(
 		}
 
 		return try {
-			val starredEntities = songDao.getStarredSongs()
+			val starredEntities = songDao.getPendingStarredDownloads()
 			val missingDownloads = starredEntities
 				.map { it.toDomainModel() }
 				.filter { !downloadManager.isDownloaded(it.id) }
@@ -51,16 +52,20 @@ class AutoCacheStarredWorker(
 				return Result.success()
 			}
 
-			Logger.i("AutoCacheStarredWorker", "Auto-caching ${missingDownloads.size} missing starred songs...")
+			Logger.i("AutoCacheStarredWorker", "Throttled auto-caching ${missingDownloads.size} missing starred songs (concurrency=1)...")
 			for (song in missingDownloads) {
 				if (!networkPolicy.canExecuteDownload(DownloadTrigger.AUTOMATIC_BACKGROUND)) {
 					Logger.w("AutoCacheStarredWorker", "Network changed during auto-cache batch execution, stopping.")
 					break
 				}
+
 				downloadManager.downloadSong(song).join()
+
+				// Lightweight throttle delay between consecutive downloads to keep CPU/network impact low
+				delay(500L)
 			}
 
-			Logger.i("AutoCacheStarredWorker", "Auto-cache starred worker complete.")
+			Logger.i("AutoCacheStarredWorker", "Throttled auto-cache starred worker complete.")
 			Result.success()
 		} catch (e: CancellationException) {
 			throw e

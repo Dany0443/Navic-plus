@@ -46,6 +46,9 @@ interface SongDao {
 	@Query("SELECT * FROM SongEntity WHERE starredAt IS NOT NULL")
 	suspend fun getStarredSongs(): List<SongEntity>
 
+	@Query("SELECT * FROM SongEntity WHERE starredAt IS NOT NULL ORDER BY starredAt DESC")
+	suspend fun getPendingStarredDownloads(): List<SongEntity>
+
 	@Query("SELECT userRating FROM SongEntity WHERE songId = :songId")
 	suspend fun getSongRating(songId: String): Int?
 
