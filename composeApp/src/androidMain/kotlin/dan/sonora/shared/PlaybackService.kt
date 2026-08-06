@@ -115,6 +115,15 @@ class PlaybackService : MediaSessionService(), KoinComponent {
 				mediaSession?.setCustomLayout(makeButtons(player))
 			}
 
+			override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+				val songId = mediaItem?.mediaId
+				if (!songId.isNullOrEmpty() && !connectivityManager.isOnline.value) {
+					if (!playbackCacheManager.isFullyCached(songId)) {
+						playbackCacheManager.evictIncompleteCache(songId)
+					}
+				}
+			}
+
 			override fun onPlayerError(error: PlaybackException) {
 				val currentMediaItem = player.currentMediaItem
 				val songId = currentMediaItem?.mediaId

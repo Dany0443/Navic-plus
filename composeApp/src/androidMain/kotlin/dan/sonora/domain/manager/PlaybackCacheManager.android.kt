@@ -54,9 +54,7 @@ actual class PlaybackCacheManager(
 	}
 
 	actual fun isTrackCached(songId: String): Boolean {
-		val cache = simpleCache ?: return false
-		val key = "subsonic_song_$songId"
-		return cache.getCachedBytes(key, 0, -1) > 0L
+		return isFullyCached(songId)
 	}
 
 	actual fun isFullyCached(songId: String): Boolean {
@@ -85,8 +83,33 @@ actual class PlaybackCacheManager(
 		}
 	}
 
+	fun purgeAllIncompleteCaches() {
+		val cache = simpleCache ?: return
+		try {
+			val keys = cache.keys
+			var purgedCount = 0
+			for (key in keys) {
+				if (key.startsWith("subsonic_song_")) {
+					val cachedBytes = cache.getCachedBytes(key, 0, -1)
+					val metadata = cache.getContentMetadata(key)
+					val contentLength = ContentMetadata.getContentLength(metadata)
+					if (contentLength != C.LENGTH_UNSET.toLong() && contentLength > 0L && cachedBytes < contentLength) {
+						cache.removeResource(key)
+						purgedCount++
+					}
+				}
+			}
+			if (purgedCount > 0) {
+				Logger.i("PlaybackCacheManager", "Purged $purgedCount incomplete stream cache resources")
+			}
+		} catch (e: Exception) {
+			Logger.e("PlaybackCacheManager", "Failed to purge incomplete stream caches", e)
+		}
+	}
+
 	actual fun refreshCacheSize() {
 		scope.launch {
+			purgeAllIncompleteCaches()
 			val bytes = calculateDirectorySize(cacheDir)
 			val mb = bytes.toDouble() / (1024 * 1024)
 			_cacheSizeFormatted.value = if (mb >= 1024) {
