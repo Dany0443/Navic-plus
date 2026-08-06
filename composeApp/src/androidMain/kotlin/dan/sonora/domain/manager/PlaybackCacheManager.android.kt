@@ -52,6 +52,12 @@ actual class PlaybackCacheManager(
 		return cache
 	}
 
+	actual fun isTrackCached(songId: String): Boolean {
+		val cache = simpleCache ?: return false
+		val key = "subsonic_song_$songId"
+		return cache.getCachedBytes(key, 0, -1) > 0L
+	}
+
 	actual fun refreshCacheSize() {
 		scope.launch {
 			val bytes = calculateDirectorySize(cacheDir)

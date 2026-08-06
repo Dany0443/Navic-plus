@@ -71,6 +71,8 @@ import dan.sonora.util.core.InlineExplicitIcon
 import dan.sonora.util.core.toHoursMinutesSeconds
 import dan.sonora.util.ui.segmentedShapes
 
+import dan.sonora.domain.manager.PlaybackCacheManager
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CollectionDetailScreenSongRow(
@@ -87,15 +89,18 @@ fun CollectionDetailScreenSongRow(
 	isOffline: Boolean = false
 ) {
 	val preferenceManager = koinInject<PreferenceManager>()
+	val playbackCacheManager = koinInject<PlaybackCacheManager>()
 
 	val player = koinInject<MediaPlayerViewModel>()
 	val playerState by player.uiState.collectAsStateWithLifecycle()
 
 	val isDownloaded = download?.status == DownloadStatus.DOWNLOADED
+	val isStreamCached = playbackCacheManager.isTrackCached(song.id)
+	val isOfflineAvailable = isDownloaded || isStreamCached
 	val isCurrentTrack = playerState.currentSong?.id == song.id
 	val isExplicit = song.explicitStatus == DomainExplicitStatus.Explicit
 		&& preferenceManager.explicitContentPlayback != ExplicitContentPlayback.Allowed
-	val maybeUnavailable = isOffline && !isDownloaded
+	val maybeUnavailable = isOffline && !isOfflineAvailable
 
 	val dismissState = rememberSwipeToDismissBoxState()
 	val scope = rememberCoroutineScope()
@@ -267,6 +272,15 @@ fun CollectionDetailScreenSongRow(
 
 							else -> {}
 						}
+					}
+					if (isStreamCached && !isDownloaded && (download == null || download.status != DownloadStatus.DOWNLOADING) && !isCurrentTrack) {
+						Icon(
+							Icons.Outlined.Check,
+							contentDescription = "Stream Cached",
+							modifier = Modifier.size(16.dp),
+							tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+						)
+						Spacer(Modifier.width(8.dp))
 					}
 					if (isCurrentTrack) {
 						Waveform(

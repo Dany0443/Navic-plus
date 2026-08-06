@@ -55,6 +55,8 @@ import dan.sonora.ui.navigation.Screen
 import dan.sonora.ui.screens.playlist.dialogs.PlaylistUpdateDialog
 import dan.sonora.util.core.InlineExplicitIcon
 
+import dan.sonora.domain.manager.PlaybackCacheManager
+
 @Composable
 fun SongRow(
 	modifier: Modifier = Modifier,
@@ -78,6 +80,7 @@ fun SongRow(
 	onSetRating: (Int) -> Unit
 ) {
 	val preferenceManager = koinInject<PreferenceManager>()
+	val playbackCacheManager = koinInject<PlaybackCacheManager>()
 	val player = koinInject<MediaPlayerViewModel>()
 	val playerState by player.uiState.collectAsStateWithLifecycle()
 
@@ -87,10 +90,12 @@ fun SongRow(
 	var duplicateQueueDialogShownPlayNext by rememberSaveable { mutableStateOf(false) }
 
 	val isDownloaded = download?.status == DownloadStatus.DOWNLOADED
+	val isStreamCached = playbackCacheManager.isTrackCached(song.id)
+	val isOfflineAvailable = isDownloaded || isStreamCached
 	val isCurrentTrack = playerState.currentSong?.id == song.id
 	val isExplicit = song.explicitStatus == DomainExplicitStatus.Explicit
 		&& preferenceManager.explicitContentPlayback != ExplicitContentPlayback.Allowed
-	val maybeUnavailable = !isOnline && !isDownloaded
+	val maybeUnavailable = !isOnline && !isOfflineAvailable
 
 	ListItem(
 		modifier = modifier
@@ -191,6 +196,15 @@ fun SongRow(
 
 						else -> {}
 					}
+				}
+				if (isStreamCached && !isDownloaded && (download == null || download.status != DownloadStatus.DOWNLOADING) && !isCurrentTrack) {
+					Icon(
+						Icons.Outlined.Check,
+						contentDescription = "Stream Cached",
+						modifier = Modifier.size(16.dp),
+						tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+					)
+					Spacer(Modifier.width(8.dp))
 				}
 				if (isCurrentTrack) {
 					Waveform(

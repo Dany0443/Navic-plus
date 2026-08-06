@@ -41,6 +41,7 @@ import dan.sonora.shared.playback.SonoraAudioRenderersFactory
 import dan.sonora.shared.playback.PlaybackEngine
 import dan.sonora.util.core.ResourceProvider
 import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheKeyFactory
 
 /**
  * The `MediaSessionService` host for playback.
@@ -119,11 +120,20 @@ class PlaybackService : MediaSessionService(), KoinComponent {
 	private fun createPlayerFactory(): ExoPlayerFactory {
 		val httpDataSourceFactory = DefaultHttpDataSource.Factory()
 			.setDefaultRequestProperties(preferenceManager.customHeadersMap())
+		val subsonicCacheKeyFactory = CacheKeyFactory { dataSpec ->
+			val songId = dataSpec.uri.getQueryParameter("id")
+			if (!songId.isNullOrEmpty()) {
+				"subsonic_song_$songId"
+			} else {
+				dataSpec.key ?: dataSpec.uri.toString()
+			}
+		}
 		val effectiveDataSourceFactory = if (preferenceManager.autoCachePlayedSongs) {
 			val simpleCache = playbackCacheManager.getOrCreateSimpleCache()
 			val cacheDataSourceFactory = CacheDataSource.Factory()
 				.setCache(simpleCache)
 				.setUpstreamDataSourceFactory(httpDataSourceFactory)
+				.setCacheKeyFactory(subsonicCacheKeyFactory)
 				.setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 			DefaultDataSource.Factory(this, cacheDataSourceFactory)
 		} else {
