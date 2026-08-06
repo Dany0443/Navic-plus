@@ -7,4 +7,6 @@ expect class PlaybackCacheManager {
 	fun clearCache()
 	fun refreshCacheSize()
 	fun isTrackCached(songId: String): Boolean
+	fun isFullyCached(songId: String): Boolean
+	fun evictIncompleteCache(songId: String)
 }

@@ -1,9 +1,10 @@
 package dan.sonora.domain.manager
 
 import android.content.Context
-import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.cache.ContentMetadata
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import dan.sonora.util.core.Logger
@@ -56,6 +57,32 @@ actual class PlaybackCacheManager(
 		val cache = simpleCache ?: return false
 		val key = "subsonic_song_$songId"
 		return cache.getCachedBytes(key, 0, -1) > 0L
+	}
+
+	actual fun isFullyCached(songId: String): Boolean {
+		val cache = simpleCache ?: return false
+		val key = "subsonic_song_$songId"
+		val cachedBytes = cache.getCachedBytes(key, 0, -1)
+		if (cachedBytes <= 0L) return false
+		val metadata = cache.getContentMetadata(key)
+		val contentLength = ContentMetadata.getContentLength(metadata)
+		return if (contentLength != C.LENGTH_UNSET.toLong() && contentLength > 0L) {
+			cachedBytes >= contentLength
+		} else {
+			true
+		}
+	}
+
+	actual fun evictIncompleteCache(songId: String) {
+		val cache = simpleCache ?: return
+		val key = "subsonic_song_$songId"
+		try {
+			cache.removeResource(key)
+			refreshCacheSize()
+			Logger.i("PlaybackCacheManager", "Evicted incomplete cache resource: $key")
+		} catch (e: Exception) {
+			Logger.e("PlaybackCacheManager", "Failed to evict incomplete cache resource: $key", e)
+		}
 	}
 
 	actual fun refreshCacheSize() {

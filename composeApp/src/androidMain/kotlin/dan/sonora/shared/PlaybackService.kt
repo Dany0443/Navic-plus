@@ -40,8 +40,12 @@ import dan.sonora.shared.playback.EqualizerSettingsProvider
 import dan.sonora.shared.playback.SonoraAudioRenderersFactory
 import dan.sonora.shared.playback.PlaybackEngine
 import dan.sonora.util.core.ResourceProvider
+import android.widget.Toast
+import androidx.media3.common.PlaybackException
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheKeyFactory
+import java.io.IOException
 
 /**
  * The `MediaSessionService` host for playback.
@@ -109,6 +113,26 @@ class PlaybackService : MediaSessionService(), KoinComponent {
 
 			override fun onRepeatModeChanged(repeatMode: Int) {
 				mediaSession?.setCustomLayout(makeButtons(player))
+			}
+
+			override fun onPlayerError(error: PlaybackException) {
+				val currentMediaItem = player.currentMediaItem
+				val songId = currentMediaItem?.mediaId
+				val cause = error.cause
+				val isNetworkError = error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
+					|| error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED
+					|| error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+					|| cause is HttpDataSource.HttpDataSourceException
+					|| cause is IOException
+
+				if (!songId.isNullOrEmpty() && isNetworkError && !playbackCacheManager.isFullyCached(songId)) {
+					playbackCacheManager.evictIncompleteCache(songId)
+					Toast.makeText(
+						applicationContext,
+						"Track not fully cached. Connect to network to finish streaming.",
+						Toast.LENGTH_LONG
+					).show()
+				}
 			}
 		})
 	}
