@@ -6,6 +6,7 @@ import dan.sonora.domain.models.DomainExplicitStatus
 import dan.sonora.domain.models.DomainReplayGain
 import dan.sonora.domain.models.DomainSong
 import kotlin.time.Duration.Companion.seconds
+import java.lang.reflect.Method
 import dev.zt64.subsonic.api.model.Song as ApiSong
 
 fun ApiSong.toEntity(
@@ -152,11 +153,15 @@ fun DomainSong.toEntity() = SongEntity(
 	explicitStatus = this.explicitStatus
 )
 
+private val apiSongMethodsByName: Map<String, Method> =
+	ApiSong::class.java.methods
+		.filter { it.parameterCount == 0 }
+		.associateBy { it.name }
+
 private fun ApiSong.extractStringByGetterNames(vararg getterNames: String): String? {
 	for (getterName in getterNames) {
 		val value = runCatching {
-			javaClass.methods
-				.firstOrNull { it.name == getterName && it.parameterCount == 0 }
+			apiSongMethodsByName[getterName]
 				?.invoke(this) as? String
 		}.getOrNull()?.trim()
 		if (!value.isNullOrBlank()) return value
@@ -167,8 +172,7 @@ private fun ApiSong.extractStringByGetterNames(vararg getterNames: String): Stri
 private fun ApiSong.extractAlbumArtistsByGetterNames(vararg getterNames: String): List<String>? {
 	for (getterName in getterNames) {
 		val raw = runCatching {
-			javaClass.methods
-				.firstOrNull { it.name == getterName && it.parameterCount == 0 }
+			apiSongMethodsByName[getterName]
 				?.invoke(this)
 		}.getOrNull() ?: continue
 

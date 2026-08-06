@@ -15,12 +15,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import sonora.composeapp.generated.resources.Res
 import sonora.composeapp.generated.resources.info_status_idle
+import sonora.composeapp.generated.resources.info_syncing
 import org.jetbrains.compose.resources.StringResource
 import dan.sonora.data.database.dao.AlbumDao
 import dan.sonora.data.database.dao.SyncActionDao
 import dan.sonora.data.database.entities.SyncActionEntity
 import dan.sonora.data.database.entities.SyncActionType
-import dan.sonora.domain.repositories.DbRepository
 import dan.sonora.util.core.Logger
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
@@ -30,16 +30,17 @@ import kotlin.time.Instant
 data class SyncState(
 	val isSyncing: Boolean = false,
 	val progress: Float = 0f,
-	val message: StringResource = Res.string.info_status_idle
+	val message: StringResource = Res.string.info_status_idle,
+	val error: String? = null
 )
 
 class SyncManager(
-	private val repository: DbRepository,
 	private val syncDao: SyncActionDao,
 	private val albumDao: AlbumDao,
 	private val connectivityManager: ConnectivityManager,
 	private val sessionManager: SessionManager,
-	private val preferenceManager: PreferenceManager
+	private val preferenceManager: PreferenceManager,
+	private val syncEnqueuer: LibrarySyncEnqueuer
 ) {
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 	private var syncJob: Job? = null
@@ -65,8 +66,9 @@ class SyncManager(
 		if (syncJob?.isActive == true) return
 
 		scope.launch {
-			if (albumDao.getAlbumCount() == 0
-				|| preferenceManager.lastFullSyncTime <= 0L
+			if ((albumDao.getAlbumCount() == 0
+					|| preferenceManager.lastFullSyncTime <= 0L)
+				&& sessionManager.isLoggedIn.value
 			) {
 				Logger.i("SyncManager", "Syncing now because we haven't synced before")
 				runSyncCycle()
@@ -82,10 +84,8 @@ class SyncManager(
 	}
 
 	fun triggerManualSync() {
-		scope.launch {
-			preferenceManager.lastFullSyncTime = 0
-			runSyncCycle()
-		}
+		preferenceManager.lastFullSyncTime = 0
+		triggerFullSync()
 	}
 
 	fun stopPeriodicSync() {
@@ -102,6 +102,34 @@ class SyncManager(
 		}
 	}
 
+	fun triggerFullSync() {
+		if (syncState.value.isSyncing) {
+			Logger.i("SyncManager", "Full sync already in progress, skipping duplicate trigger.")
+			return
+		}
+		Logger.i("SyncManager", "Enqueuing full library sync...")
+		syncState.value = SyncState(isSyncing = true, progress = 0f, message = Res.string.info_syncing)
+		syncEnqueuer.enqueue()
+	}
+
+	fun updateSyncProgress(progress: Float, message: StringResource) {
+		syncState.update {
+			it.copy(isSyncing = true, progress = progress, message = message)
+		}
+	}
+
+	fun completeSync(error: String?) {
+		syncState.update {
+			if (error == null) {
+				preferenceManager.lastFullSyncTime = Clock.System.now().toEpochMilliseconds()
+				it.copy(isSyncing = false, progress = 1f, message = Res.string.info_status_idle)
+			} else {
+				it.copy(isSyncing = false, error = error, message = Res.string.info_status_idle)
+			}
+		}
+		Logger.i("SyncManager", if (error == null) "Full library sync complete." else "Full library sync failed: $error")
+	}
+
 	private suspend fun runSyncCycle() {
 		syncMutex.withLock {
 			processQueue()
@@ -109,25 +137,7 @@ class SyncManager(
 			val currentTime = Clock.System.now()
 			if (currentTime - Instant.fromEpochMilliseconds(preferenceManager.lastFullSyncTime) > fullSyncThreshold) {
 				Logger.i("SyncManager", "Starting full library pull...")
-
-				syncState.update {
-					it.copy(isSyncing = true)
-				}
-
-				val result = repository.syncEverything { progress, message ->
-					syncState.update {
-						it.copy(isSyncing = true, progress = progress, message = message)
-					}
-				}
-
-				if (result.isSuccess) {
-					preferenceManager.lastFullSyncTime = currentTime.toEpochMilliseconds()
-					Logger.i("SyncManager", "Full library sync complete.")
-				}
-
-				syncState.update {
-					it.copy(isSyncing = false, message = Res.string.info_status_idle)
-				}
+				triggerFullSync()
 			}
 		}
 	}

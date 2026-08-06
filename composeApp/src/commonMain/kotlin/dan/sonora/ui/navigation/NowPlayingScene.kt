@@ -55,14 +55,9 @@ class NowPlayingScene<T : Any>(
 		val lifecycleOwner = rememberLifecycleOwner()
 		val screenCornerRadius = rememberScreenCornerRadius()
 
-		// Compose does not currently expose this transition progress publicly.
-		@Suppress("INVISIBLE_REFERENCE")
-		val expandProgress = sheetState.anchoredDraggableState.progress(
-			from = SheetValue.Hidden,
-			to = SheetValue.Expanded
-		)
-		val shape = remember(expandProgress, screenCornerRadius) {
-			if (expandProgress == 1f) {
+		val isExpanded = sheetState.currentValue == SheetValue.Expanded
+		val shape = remember(isExpanded, screenCornerRadius) {
+			if (isExpanded) {
 				RectangleShape
 			} else {
 				ContinuousRoundedRectangle(

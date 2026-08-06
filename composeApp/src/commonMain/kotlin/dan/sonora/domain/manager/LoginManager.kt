@@ -10,13 +10,15 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import dan.sonora.domain.repositories.DbRepository
 import dan.sonora.ui.core.LoginUiState
 
 class LoginManager(
     private val repository: DbRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val syncManager: SyncManager
 ) {
 	val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -87,12 +89,19 @@ class LoginManager(
 					passwordState.text.toString()
 				)
 
-				repository.syncEverything { progress, message ->
-					loginState.value = LoginUiState.Syncing(progress, message)
-				}.onSuccess {
-					loginState.value = LoginUiState.Success
-				}.onFailure { e ->
-					loginState.value = LoginUiState.Error(e as Exception)
+				syncManager.triggerFullSync()
+
+				syncManager.syncState
+					.takeWhile { it.isSyncing }
+					.collect { state ->
+						loginState.value = LoginUiState.Syncing(state.progress, state.message)
+					}
+
+				val finalState = syncManager.syncState.value
+				loginState.value = if (finalState.error != null) {
+					LoginUiState.Error(Exception(finalState.error))
+				} else {
+					LoginUiState.Success
 				}
 
 			} catch (e: Exception) {

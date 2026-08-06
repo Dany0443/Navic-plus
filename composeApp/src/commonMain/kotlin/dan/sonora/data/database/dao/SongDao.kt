@@ -23,6 +23,11 @@ interface SongDao {
 	@Upsert
 	suspend fun insertSongs(songs: List<SongEntity>)
 
+	@Transaction
+	suspend fun insertSongsPrepared(songs: List<SongEntity>) {
+		songs.forEach { insertSong(it) }
+	}
+
 	@Insert(onConflict = OnConflictStrategy.IGNORE)
 	suspend fun insertSongsIgnoringConflicts(songs: List<SongEntity>)
 

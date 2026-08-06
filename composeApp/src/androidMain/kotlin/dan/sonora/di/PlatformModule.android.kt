@@ -1,16 +1,17 @@
 package dan.sonora.di
 
 import androidx.room3.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import dan.sonora.data.database.CacheDatabase
 import dan.sonora.data.database.DownloadDatabase
 import dan.sonora.domain.manager.AppIconManager
+import dan.sonora.domain.manager.AndroidLibrarySyncEnqueuer
 import dan.sonora.domain.manager.ConnectivityManager
 import dan.sonora.domain.manager.EqualizerSettingsUpdater
 import dan.sonora.domain.manager.InsightsAutoSyncScheduler
+import dan.sonora.domain.manager.LibrarySyncEnqueuer
 import dan.sonora.domain.manager.LogManager
 import dan.sonora.domain.manager.PermissionManager
 import dan.sonora.domain.manager.PreferenceManager
@@ -31,7 +32,6 @@ actual val platformModule = module {
 			.absolutePath
 		Room
 			.databaseBuilder<CacheDatabase>(get(), dbPath)
-			.setDriver(BundledSQLiteDriver())
 			.fallbackToDestructiveMigration(true)
 			.build()
 	}
@@ -42,7 +42,6 @@ actual val platformModule = module {
 			.absolutePath
 		Room
 			.databaseBuilder<DownloadDatabase>(get(), dbPath)
-			.setDriver(BundledSQLiteDriver())
 			.fallbackToDestructiveMigration(true)
 			.build()
 	}
@@ -77,6 +76,7 @@ actual val platformModule = module {
 	singleOf(::AppIconManager)
 	singleOf(::PermissionManager)
 	single { InsightsAutoSyncScheduler(androidApplication()) }
+	single<LibrarySyncEnqueuer> { AndroidLibrarySyncEnqueuer(androidApplication()) }
 	single {
 		EqualizerSettingsProvider(
 			initialSettings = get<PreferenceManager>().equalizerSettings,

@@ -49,9 +49,13 @@ class PlaylistRepository(
 		listType: DomainPlaylistListType,
 		reversed: Boolean
 	): ImmutableList<DomainPlaylist> {
-		dbRepository.syncPlaylists().getOrThrow().forEach { playlist ->
-			dbRepository.syncPlaylistSongs(playlist.playlistId).getOrThrow()
-		}
+		val localData = getLocalData(listType, reversed)
+		dbRepository.syncPlaylists().getOrThrow()
+		localData
+			.filter { it.songCount > 0 && it.songs.isEmpty() }
+			.forEach { playlist ->
+				dbRepository.syncPlaylistSongs(playlist.id).getOrThrow()
+			}
 		return getLocalData(listType, reversed)
 	}
 

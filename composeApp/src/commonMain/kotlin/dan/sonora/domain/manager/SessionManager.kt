@@ -4,6 +4,7 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.set
 import dev.zt64.subsonic.client.SubsonicAuth
 import dev.zt64.subsonic.client.SubsonicClient
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
@@ -42,6 +43,12 @@ class SessionManager(
 		clientConfig = {
 			install(UserAgent) {
 				agent = "Sonora"
+			}
+
+			install(HttpTimeout) {
+				requestTimeoutMillis = 120_000
+				connectTimeoutMillis = 30_000
+				socketTimeoutMillis = 120_000
 			}
 
 			val customHeaders = preferenceManager.customHeadersMap()
