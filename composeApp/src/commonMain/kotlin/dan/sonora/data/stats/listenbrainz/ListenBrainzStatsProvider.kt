@@ -68,12 +68,28 @@ class ListenBrainzStatsProvider(
 	}
 
 	override fun disconnect() {
-		clearCache()
+		clearCacheSync()
 		authStore.clear()
 	}
 
-	private fun clearCache() {
-		synchronized(cacheMutex) {
+	private suspend fun clearCache() {
+		cacheMutex.withLock {
+			cachedListenCount = null
+			cachedTopArtists.clear()
+			cachedTopTracks.clear()
+		}
+	}
+
+	private fun clearCacheSync() {
+		if (cacheMutex.tryLock()) {
+			try {
+				cachedListenCount = null
+				cachedTopArtists.clear()
+				cachedTopTracks.clear()
+			} finally {
+				cacheMutex.unlock()
+			}
+		} else {
 			cachedListenCount = null
 			cachedTopArtists.clear()
 			cachedTopTracks.clear()
