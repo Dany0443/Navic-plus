@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import dan.sonora.domain.models.settings.GridSize
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -92,55 +96,117 @@ fun ArtGridItem(
 	tab: String
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
+	val preferenceManager = koinInject<PreferenceManager>()
+	val isListMode = preferenceManager.gridSize == GridSize.OneByOne
+
 	with(LocalSharedTransitionScope.current) {
-		Column(
-			modifier = Modifier
-				.fillMaxWidth()
-				.combinedClickable(
-					interactionSource = interactionSource,
-					indication = null,
-					onClick = onClick,
-					onLongClick = onLongClick
-				)
-				.semantics {
-					contentDescription = title
-				}
-				.then(modifier)
-		) {
-			CoverArt(
-				coverArtId = coverArtId,
-				contentDescription = title,
-				placeholder = placeholder,
+		if (isListMode) {
+			Row(
 				modifier = Modifier
 					.fillMaxWidth()
-					.sharedElement(
-						sharedContentState = this@with.rememberSharedContentState("${tab}-${id}-cover"),
-						boundsTransform = BoundsTransform { _, _ ->
-							tween(
-								durationMillis = 500,
-								easing = EmphasizedDecelerateEasing
-							)
-						},
-						animatedVisibilityScope = LocalNavAnimatedContentScope.current
-					),
-				interactionSource = interactionSource
-			)
-			Text(
-				text = title,
-				style = MaterialTheme.typography.titleSmallEmphasized,
-				modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-				maxLines = 2,
-				overflow = TextOverflow.Ellipsis
-			)
-			subtitle?.let {
+					.combinedClickable(
+						interactionSource = interactionSource,
+						indication = null,
+						onClick = onClick,
+						onLongClick = onLongClick
+					)
+					.semantics {
+						contentDescription = title
+					}
+					.then(modifier),
+				verticalAlignment = Alignment.CenterVertically
+			) {
+				CoverArt(
+					coverArtId = coverArtId,
+					contentDescription = title,
+					placeholder = placeholder,
+					modifier = Modifier
+						.size(56.dp)
+						.sharedElement(
+							sharedContentState = this@with.rememberSharedContentState("${tab}-${id}-cover"),
+							boundsTransform = BoundsTransform { _, _ ->
+								tween(
+									durationMillis = 500,
+									easing = EmphasizedDecelerateEasing
+								)
+							},
+							animatedVisibilityScope = LocalNavAnimatedContentScope.current
+						),
+					interactionSource = interactionSource
+				)
+				Column(
+					modifier = Modifier
+						.weight(1f)
+						.padding(start = 16.dp),
+					verticalArrangement = Arrangement.Center
+				) {
+					Text(
+						text = title,
+						style = MaterialTheme.typography.titleSmallEmphasized,
+						maxLines = 1,
+						overflow = TextOverflow.Ellipsis
+					)
+					subtitle?.let {
+						Text(
+							text = subtitle,
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.onSurfaceVariant,
+							maxLines = 1,
+							overflow = TextOverflow.Ellipsis
+						)
+					}
+				}
+			}
+		} else {
+			Column(
+				modifier = Modifier
+					.fillMaxWidth()
+					.combinedClickable(
+						interactionSource = interactionSource,
+						indication = null,
+						onClick = onClick,
+						onLongClick = onLongClick
+					)
+					.semantics {
+						contentDescription = title
+					}
+					.then(modifier)
+			) {
+				CoverArt(
+					coverArtId = coverArtId,
+					contentDescription = title,
+					placeholder = placeholder,
+					modifier = Modifier
+						.fillMaxWidth()
+						.sharedElement(
+							sharedContentState = this@with.rememberSharedContentState("${tab}-${id}-cover"),
+							boundsTransform = BoundsTransform { _, _ ->
+								tween(
+									durationMillis = 500,
+									easing = EmphasizedDecelerateEasing
+								)
+							},
+							animatedVisibilityScope = LocalNavAnimatedContentScope.current
+						),
+					interactionSource = interactionSource
+				)
 				Text(
-					text = subtitle,
-					style = MaterialTheme.typography.bodySmall,
-					color = MaterialTheme.colorScheme.onSurfaceVariant,
-					modifier = Modifier.fillMaxWidth(),
+					text = title,
+					style = MaterialTheme.typography.titleSmallEmphasized,
+					modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
 					maxLines = 2,
 					overflow = TextOverflow.Ellipsis
 				)
+				subtitle?.let {
+					Text(
+						text = subtitle,
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						modifier = Modifier.fillMaxWidth(),
+						maxLines = 2,
+						overflow = TextOverflow.Ellipsis
+					)
+				}
 			}
 		}
 	}

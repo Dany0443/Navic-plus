@@ -8,6 +8,7 @@ package dan.sonora.domain.models.settings
  * @property label The label for this size, to be seen in settings
  */
 enum class GridSize(val value: Int, val label: String) {
+	OneByOne(1, "1x1 (List)"),
 	TwoByTwo(2, "2x2"),
 	ThreeByThree(3, "3x3"),
 	FourByFour(4, "4x4")
