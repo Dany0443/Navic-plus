@@ -28,7 +28,7 @@ import dan.sonora.data.database.entities.SyncActionEntity
 import dan.sonora.data.database.entities.ScrobbleEntity
 
 @Database(
-	version = 18,
+	version = 19,
 	entities = [
 		AlbumEntity::class,
 		GenreEntity::class,

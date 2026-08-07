@@ -18,6 +18,7 @@ import dan.sonora.ui.core.UiState
 fun LazyGridScope.playlistListScreenContent(
 	state: UiState<List<DomainPlaylist>>,
 	localMusicEnabled: Boolean,
+	isListMode: Boolean = false,
 	onOpenLocalMusic: () -> Unit,
 	selectedPlaylist: DomainPlaylist?,
 	onUpdateSelection: (DomainPlaylist) -> Unit,
@@ -29,7 +30,7 @@ fun LazyGridScope.playlistListScreenContent(
 ) {
 	val data = state.data.orEmpty()
 	if (localMusicEnabled) {
-		item(key = "local-music") {
+		item(key = "local-music", span = if (isListMode) { { GridItemSpan(maxLineSpan) } } else null) {
 			LocalMusicCollectionItem(
 				modifier = Modifier.animateItem(),
 				tab = "playlists",
@@ -38,12 +39,17 @@ fun LazyGridScope.playlistListScreenContent(
 		}
 	}
 	if (data.isNotEmpty()) {
-		items(data, { it.id }) { playlist ->
+		items(
+			items = data,
+			key = { it.id },
+			span = if (isListMode) { { GridItemSpan(maxLineSpan) } } else null
+		) { playlist ->
 			PlaylistListScreenItem(
 				modifier = Modifier.animateItem(),
 				tab = "playlists",
 				playlist = playlist,
 				selected = playlist == selectedPlaylist,
+				isListMode = isListMode,
 				onSelect = { onUpdateSelection(playlist) },
 				onDeselect = { onClearSelection() },
 				onSetShareId = onSetShareId,

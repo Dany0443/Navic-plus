@@ -96,117 +96,55 @@ fun ArtGridItem(
 	tab: String
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
-	val preferenceManager = koinInject<PreferenceManager>()
-	val isListMode = preferenceManager.gridSize == GridSize.OneByOne
-
 	with(LocalSharedTransitionScope.current) {
-		if (isListMode) {
-			Row(
-				modifier = Modifier
-					.fillMaxWidth()
-					.combinedClickable(
-						interactionSource = interactionSource,
-						indication = null,
-						onClick = onClick,
-						onLongClick = onLongClick
-					)
-					.semantics {
-						contentDescription = title
-					}
-					.then(modifier),
-				verticalAlignment = Alignment.CenterVertically
-			) {
-				CoverArt(
-					coverArtId = coverArtId,
-					contentDescription = title,
-					placeholder = placeholder,
-					modifier = Modifier
-						.size(56.dp)
-						.sharedElement(
-							sharedContentState = this@with.rememberSharedContentState("${tab}-${id}-cover"),
-							boundsTransform = BoundsTransform { _, _ ->
-								tween(
-									durationMillis = 500,
-									easing = EmphasizedDecelerateEasing
-								)
-							},
-							animatedVisibilityScope = LocalNavAnimatedContentScope.current
-						),
-					interactionSource = interactionSource
+		Column(
+			modifier = Modifier
+				.fillMaxWidth()
+				.combinedClickable(
+					interactionSource = interactionSource,
+					indication = null,
+					onClick = onClick,
+					onLongClick = onLongClick
 				)
-				Column(
-					modifier = Modifier
-						.weight(1f)
-						.padding(start = 16.dp),
-					verticalArrangement = Arrangement.Center
-				) {
-					Text(
-						text = title,
-						style = MaterialTheme.typography.titleSmallEmphasized,
-						maxLines = 1,
-						overflow = TextOverflow.Ellipsis
-					)
-					subtitle?.let {
-						Text(
-							text = subtitle,
-							style = MaterialTheme.typography.bodySmall,
-							color = MaterialTheme.colorScheme.onSurfaceVariant,
-							maxLines = 1,
-							overflow = TextOverflow.Ellipsis
-						)
-					}
+				.semantics {
+					contentDescription = title
 				}
-			}
-		} else {
-			Column(
+				.then(modifier)
+		) {
+			CoverArt(
+				coverArtId = coverArtId,
+				contentDescription = title,
+				placeholder = placeholder,
 				modifier = Modifier
 					.fillMaxWidth()
-					.combinedClickable(
-						interactionSource = interactionSource,
-						indication = null,
-						onClick = onClick,
-						onLongClick = onLongClick
-					)
-					.semantics {
-						contentDescription = title
-					}
-					.then(modifier)
-			) {
-				CoverArt(
-					coverArtId = coverArtId,
-					contentDescription = title,
-					placeholder = placeholder,
-					modifier = Modifier
-						.fillMaxWidth()
-						.sharedElement(
-							sharedContentState = this@with.rememberSharedContentState("${tab}-${id}-cover"),
-							boundsTransform = BoundsTransform { _, _ ->
-								tween(
-									durationMillis = 500,
-									easing = EmphasizedDecelerateEasing
-								)
-							},
-							animatedVisibilityScope = LocalNavAnimatedContentScope.current
-						),
-					interactionSource = interactionSource
-				)
+					.sharedElement(
+						sharedContentState = this@with.rememberSharedContentState("${tab}-${id}-cover"),
+						boundsTransform = BoundsTransform { _, _ ->
+							tween(
+								durationMillis = 500,
+								easing = EmphasizedDecelerateEasing
+							)
+						},
+						animatedVisibilityScope = LocalNavAnimatedContentScope.current
+					),
+				interactionSource = interactionSource
+			)
+			Text(
+				text = title,
+				style = MaterialTheme.typography.titleSmallEmphasized,
+				modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+				maxLines = 2,
+				overflow = TextOverflow.Ellipsis
+			)
+			subtitle?.let {
 				Text(
-					text = title,
-					style = MaterialTheme.typography.titleSmallEmphasized,
-					modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+					text = subtitle,
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+					modifier = Modifier.fillMaxWidth(),
 					maxLines = 2,
 					overflow = TextOverflow.Ellipsis
 				)
-				subtitle?.let {
-					Text(
-						text = subtitle,
-						style = MaterialTheme.typography.bodySmall,
-						color = MaterialTheme.colorScheme.onSurfaceVariant,
-						modifier = Modifier.fillMaxWidth(),
-						maxLines = 2,
-						overflow = TextOverflow.Ellipsis
-					)
-				}
 			}
 		}
 	}

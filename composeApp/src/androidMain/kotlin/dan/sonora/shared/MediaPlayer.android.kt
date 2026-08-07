@@ -200,7 +200,7 @@ class AndroidMediaPlayerViewModel(
 					snapshotFlow { preferenceManager.customFormatCellular }
 				) { it }.collectLatest { args ->
 					@Suppress("UNCHECKED_CAST")
-					val downloadedMap = args[0] as Map<String, String>
+					val downloadedMap = args[0] as Map<String, dan.sonora.data.database.entities.DownloadEntity>
 					val player = controller ?: return@collectLatest
 					val currentIndex = player.currentMediaItemIndex
 
@@ -209,7 +209,7 @@ class AndroidMediaPlayerViewModel(
 
 						val item = player.getMediaItemAt(i)
 						val id = item.mediaId
-						val localPath = downloadedMap[id]
+						val localPath = downloadedMap[id]?.filePath
 
 						val isCurrentlyLocal = item.localConfiguration?.uri?.scheme == "file"
 

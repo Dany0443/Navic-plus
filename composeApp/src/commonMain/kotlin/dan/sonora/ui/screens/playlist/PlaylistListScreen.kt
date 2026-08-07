@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.Scaffold
@@ -52,6 +53,8 @@ import dan.sonora.domain.models.settings.BottomBarCollapseMode
 import dan.sonora.domain.models.settings.BottomBarVisibilityMode
 import dan.sonora.icons.Icons
 import dan.sonora.icons.outlined.Add
+import dan.sonora.icons.outlined.Album
+import dan.sonora.icons.outlined.PlaylistPlay
 import dan.sonora.shared.MediaPlayerViewModel
 import dan.sonora.ui.components.dialogs.DeletionDialog
 import dan.sonora.ui.components.dialogs.DeletionEndpoint
@@ -108,7 +111,15 @@ fun PlaylistListScreen(
 
 	val gridState = rememberLazyGridState()
 
+	val isListMode = preferenceManager.playlistIsListMode
+
 	val actions: @Composable RowScope.() -> Unit = {
+		IconButton(onClick = { preferenceManager.playlistIsListMode = !isListMode }) {
+			Icon(
+				if (isListMode) Icons.Outlined.Album else Icons.Outlined.PlaylistPlay,
+				contentDescription = "Toggle View Mode"
+			)
+		}
 		PlaylistListScreenSortButton(
 			nested = nested,
 			selectedSorting = selectedSorting,
@@ -192,6 +203,7 @@ fun PlaylistListScreen(
 				playlistListScreenContent(
 					state = playlistsState,
 					localMusicEnabled = localMusicEnabled,
+					isListMode = isListMode,
 					onOpenLocalMusic = { backStack.add(Screen.SongList(nested, DomainSongListType.LocalMusic)) },
 					selectedPlaylist = selectedPlaylist,
 					onUpdateSelection = { viewModel.selectPlaylist(it) },

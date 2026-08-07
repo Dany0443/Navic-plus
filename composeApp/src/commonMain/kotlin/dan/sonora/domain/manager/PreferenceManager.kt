@@ -41,6 +41,7 @@ class PreferenceManager(
 	var nowPlayingBackgroundStyle by preference(NowPlayingBackgroundStyle.Dynamic)
 	var swipeToSkip by preference(true)
 	var gridSize by preference(GridSize.TwoByTwo)
+	var playlistIsListMode by preference(false)
 	var coverArtShape by preference(CoverArtShape.Soft)
 	var artistImageShape by preference(CoverArtShape.Soft)
 	var coverArtQuality by preference(CoverArtQuality.High)

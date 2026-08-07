@@ -2,6 +2,7 @@ package dan.sonora.data.stats.listenbrainz
 
 import dan.sonora.util.core.Logger
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
@@ -36,6 +37,11 @@ class ListenBrainzApi(
 	private val client = HttpClient {
 		install(ContentNegotiation) {
 			json(json)
+		}
+		install(HttpTimeout) {
+			requestTimeoutMillis = 5000L
+			connectTimeoutMillis = 5000L
+			socketTimeoutMillis = 5000L
 		}
 	}
 
@@ -93,24 +99,28 @@ class ListenBrainzApi(
 		path: String,
 		noinline block: HttpRequestBuilder.() -> Unit = {}
 	): T {
-		val fullUrl = "${authStore.serverUrl}$path"
-		logRequest(fullUrl, authStore.username)
-		val response = executeWithRetry {
-			client.get(fullUrl) { block() }
-		}
+		return try {
+			val fullUrl = "${authStore.serverUrl}$path"
+			logRequest(fullUrl, authStore.username)
+			val response = executeWithRetry {
+				client.get(fullUrl) { block() }
+			}
 
-		if (response.status == HttpStatusCode.NotFound) {
-			throw ListenBrainzUnknownUserException(authStore.username.orEmpty())
+			if (response.status == HttpStatusCode.NotFound) {
+				throw ListenBrainzUnknownUserException(authStore.username.orEmpty())
+			}
+			if (!response.status.isSuccess()) {
+				throw ListenBrainzApiException("ListenBrainz returned HTTP ${response.status.value}")
+			}
+			if (response.status == HttpStatusCode.NoContent) {
+				return json.decodeFromString<T>(EMPTY_PAYLOAD)
+			}
+			json.decodeFromString<T>(response.bodyAsText())
+		} catch (e: Exception) {
+			if (e is ListenBrainzUnknownUserException || e is ListenBrainzApiException) throw e
+			Logger.e("ListenBrainzApi", "ListenBrainz request failed for $path", e)
+			throw ListenBrainzApiException("ListenBrainz request failed: ${e.message}")
 		}
-		if (!response.status.isSuccess()) {
-			throw ListenBrainzApiException("ListenBrainz returned HTTP ${response.status.value}")
-		}
-		// Statistics are computed in batches, so an account with too little history —
-		// or a brand new one — yields 204 with an empty body rather than a payload.
-		if (response.status == HttpStatusCode.NoContent) {
-			return json.decodeFromString<T>(EMPTY_PAYLOAD)
-		}
-		return json.decodeFromString<T>(response.bodyAsText())
 	}
 
 	private val rateLimitMutex = Mutex()
