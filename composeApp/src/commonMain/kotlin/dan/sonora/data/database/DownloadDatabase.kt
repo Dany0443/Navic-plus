@@ -8,7 +8,7 @@ import dan.sonora.data.database.dao.DownloadDao
 import dan.sonora.data.database.entities.DownloadEntity
 
 @Database(
-	version = 3,
+	version = 4,
 	entities = [DownloadEntity::class]
 )
 @ConstructedBy(DownloadDatabaseConstructor::class)

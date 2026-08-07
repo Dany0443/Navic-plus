@@ -98,7 +98,7 @@ class AndroidMediaPlayerViewModel(
 		}
 	}
 
-	private fun getStreamUrl(id: String): Uri {
+	private fun getStreamInfo(id: String): Triple<Uri, Int, String?> {
 		val isCellular = connectivityManager.isCellular.value
 		val bitrate = if (preferenceManager.isAdvancedTranscodingActive) {
 			if (isCellular) preferenceManager.customMaxBitrateCellular else preferenceManager.customMaxBitrateWifi
@@ -110,11 +110,16 @@ class AndroidMediaPlayerViewModel(
 		} else {
 			if (isCellular) preferenceManager.streamingQualityCellular.containerAndroid else preferenceManager.streamingQualityWifi.containerAndroid
 		}
-		return sessionManager.api.getStreamUrl(id, bitrate, container?.takeIf { it.isNotBlank() })
+		val uri = sessionManager.api.getStreamUrl(id, bitrate, container?.takeIf { it.isNotBlank() })
 			.toUri()
 			.buildUpon()
 			.appendQueryParameter("estimateContentLength", "true")
 			.build()
+		return Triple(uri, bitrate, container)
+	}
+
+	private fun getStreamUrl(id: String): Uri {
+		return getStreamInfo(id).first
 	}
 
 	private fun setupController() {
@@ -307,6 +312,10 @@ class AndroidMediaPlayerViewModel(
 			}
 		}
 
+		val metadata = controller.currentMediaItem?.mediaMetadata
+		val requestedBitrate = metadata?.extras?.getInt(EXTRA_REQUESTED_BITRATE, -1)?.takeIf { it != -1 }
+		val requestedMimeType = metadata?.extras?.getString(EXTRA_REQUESTED_MIME_TYPE)
+
 		_uiState.update { state ->
 			state.copy(
 				currentIndex = index,
@@ -314,7 +323,9 @@ class AndroidMediaPlayerViewModel(
 				currentCollection = derivedCollection ?: state.currentCollection,
 				isPaused = !controller.playWhenReady,
 				isShuffleEnabled = controller.shuffleModeEnabled,
-				repeatMode = controller.repeatMode
+				repeatMode = controller.repeatMode,
+				requestedBitrate = requestedBitrate,
+				requestedMimeType = requestedMimeType
 			)
 		}
 		updateProgress()
@@ -804,11 +815,8 @@ class AndroidMediaPlayerViewModel(
 			localArtworkUri ?: coverArtId?.let { sessionManager.getCoverArtUrl(it).toUri() }
 		)
 
-		// Carry ReplayGain across to the playback service so the engine can apply it as one
-		// factor in the volume chain (see ReplayGainManager) instead of writing player.volume.
-		metadataBuilder.setExtras(ReplayGainTags.writeInto(Bundle(), replayGain))
-
-		val metadata = metadataBuilder.build()
+		var requestedBitrate: Int? = null
+		var requestedMimeType: String? = null
 
 		val uri = when {
 			id.startsWith("local_") && !filePath.isNullOrEmpty() -> {
@@ -820,14 +828,27 @@ class AndroidMediaPlayerViewModel(
 			}
 
 			else -> {
-				val localPath = downloadManager.getDownloadedFilePath(id)
-				if (localPath != null) {
-					File(localPath).toUri()
+				val download = downloadManager.downloadedSongs.value[id]
+				if (download != null) {
+					requestedBitrate = download.bitrate
+					requestedMimeType = download.format
+					File(download.filePath!!).toUri()
 				} else {
-					getStreamUrl(id)
+					val (streamUri, bitrate, container) = getStreamInfo(id)
+					requestedBitrate = bitrate
+					requestedMimeType = container
+					streamUri
 				}
 			}
 		}
+
+		val extras = ReplayGainTags.writeInto(Bundle(), replayGain).apply {
+			requestedBitrate?.let { putInt(EXTRA_REQUESTED_BITRATE, it) }
+			requestedMimeType?.let { putString(EXTRA_REQUESTED_MIME_TYPE, it) }
+		}
+
+		metadataBuilder.setExtras(extras)
+		val metadata = metadataBuilder.build()
 
 		val builder = MediaItem.Builder()
 			.setUri(uri)
@@ -839,5 +860,10 @@ class AndroidMediaPlayerViewModel(
 		}
 
 		return builder.build()
+	}
+
+	companion object {
+		private const val EXTRA_REQUESTED_BITRATE = "requested_bitrate"
+		private const val EXTRA_REQUESTED_MIME_TYPE = "requested_mime_type"
 	}
 }

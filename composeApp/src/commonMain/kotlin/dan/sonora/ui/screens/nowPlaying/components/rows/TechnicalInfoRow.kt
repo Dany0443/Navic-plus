@@ -58,25 +58,18 @@ fun NowPlayingTechnicalInfoRow() {
 						if (it >= 1000) "${it / 1000.0} kHz" else "$it Hz"
 					} ?: "-- kHz"
 
-				val isCellular = connectivityManager.isCellular.value
-				val requestedBitrate = if (preferenceManager.isAdvancedTranscodingActive) {
-					if (isCellular) preferenceManager.customMaxBitrateCellular else preferenceManager.customMaxBitrateWifi
-				} else {
-					if (isCellular) preferenceManager.streamingQualityCellular.bitrateAndroid else preferenceManager.streamingQualityWifi.bitrateAndroid
-				}
-
-				val bitrateFormatted = playerState.playbackBitrate?.let { "${it / 1000} kbps" }
-					?: if (requestedBitrate > 0) {
-						"$requestedBitrate kbps"
-					} else {
-						song?.bitRate?.let { "$it kbps" }
-					} ?: "-- kbps"
+				val bitrateFormatted =
+					(playerState.requestedBitrate?.takeIf { it > 0 }?.let { "$it kbps" })
+						?: playerState.playbackBitrate?.let { "${it / 1000} kbps" }
+						?: song?.bitRate?.let { "$it kbps" }
+						?: "-- kbps"
 
 				val format = if (song?.id?.startsWith("local_") == true) {
 					song.fileExtension.uppercase()
 				} else {
 					playerState.playbackMimeType?.split("/")?.lastOrNull()?.replace("mpeg", "mp3")
 						?.uppercase()
+						?: playerState.requestedMimeType?.replace("mpeg", "mp3")?.uppercase()
 						?: song?.fileExtension?.uppercase()
 						?: "--"
 				}

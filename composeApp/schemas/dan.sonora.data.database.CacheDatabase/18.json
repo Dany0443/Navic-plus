@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "e5ab8b3fb77e0e71e6c117c9fd564272",
+    "identityHash": "3fc490c3ea378544d68851627061a655",
     "entities": [
       {
         "tableName": "AlbumEntity",
@@ -682,7 +682,7 @@
       },
       {
         "tableName": "DownloadEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`songId` TEXT NOT NULL, `status` TEXT NOT NULL, `progress` REAL NOT NULL, `filePath` TEXT, PRIMARY KEY(`songId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`songId` TEXT NOT NULL, `status` TEXT NOT NULL, `progress` REAL NOT NULL, `filePath` TEXT, `bitrate` INTEGER, `format` TEXT, PRIMARY KEY(`songId`))",
         "fields": [
           {
             "fieldPath": "songId",
@@ -705,6 +705,16 @@
           {
             "fieldPath": "filePath",
             "columnName": "filePath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "bitrate",
+            "columnName": "bitrate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "format",
+            "columnName": "format",
             "affinity": "TEXT"
           }
         ],
@@ -770,7 +780,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e5ab8b3fb77e0e71e6c117c9fd564272')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3fc490c3ea378544d68851627061a655')"
     ]
   }
 }
