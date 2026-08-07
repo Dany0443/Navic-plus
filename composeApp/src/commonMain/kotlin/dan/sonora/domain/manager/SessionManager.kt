@@ -60,27 +60,78 @@ class SessionManager(
 		}
 	)
 
+	private fun isTlsOrSslException(e: Throwable): Boolean {
+		var cause: Throwable? = e
+		while (cause != null) {
+			val msg = cause.message ?: ""
+			val className = cause::class.simpleName ?: ""
+			if (className.contains("SSL", ignoreCase = true) ||
+				className.contains("TLS", ignoreCase = true) ||
+				msg.contains("TLS", ignoreCase = true) ||
+				msg.contains("SSL", ignoreCase = true) ||
+				msg.contains("handshake", ignoreCase = true) ||
+				msg.contains("packet header", ignoreCase = true)
+			) {
+				return true
+			}
+			cause = cause.cause
+		}
+		return false
+	}
+
 	suspend fun login(
 		instanceUrl: String,
 		username: String,
 		password: String
 	) {
-		val client = createClient(instanceUrl, username, password)
+		val cleanInput = instanceUrl.trim().removeSuffix("/")
+		val hasScheme = cleanInput.startsWith("http://", ignoreCase = true) || cleanInput.startsWith("https://", ignoreCase = true)
 
-		try {
-			client.ping()
-		} catch (e: Exception) {
+		val candidateUrls = if (hasScheme) {
+			if (cleanInput.startsWith("https://", ignoreCase = true)) {
+				val fallbackHttp = "http://" + cleanInput.substring(8)
+				listOf(cleanInput, fallbackHttp)
+			} else {
+				listOf(cleanInput)
+			}
+		} else {
+			listOf("https://$cleanInput", "http://$cleanInput")
+		}
+
+		var lastException: Exception? = null
+		var successfulUrl: String? = null
+		var successfulClient: SubsonicClient? = null
+
+		for (url in candidateUrls) {
+			val client = createClient(url, username, password)
+			try {
+				client.ping()
+				successfulUrl = url
+				successfulClient = client
+				break
+			} catch (e: Exception) {
+				lastException = e
+				if (url.startsWith("https://", ignoreCase = true) && isTlsOrSslException(e)) {
+					continue
+				}
+				if (!hasScheme) {
+					continue
+				}
+			}
+		}
+
+		if (successfulUrl == null || successfulClient == null) {
 			throw Exception(
 				"Failed to connect to the instance. Please check your credentials and try again.",
-				e
+				lastException
 			)
 		}
 
-		settings["instanceUrl"] = instanceUrl
+		settings["instanceUrl"] = successfulUrl
 		settings["username"] = username
 		settings["password"] = password
 
-		api = client
+		api = successfulClient
 		isLoggedIn.value = true
 	}
 

@@ -76,16 +76,11 @@ class LoginManager(
 			loginState.value = LoginUiState.Loading
 
 			try {
-				val rawUrl = instanceState.text.toString().trim().removeSuffix("/")
-				val url = if (rawUrl.startsWith("https://") || rawUrl.startsWith("http://")) {
-					rawUrl
-				} else {
-					"https://$rawUrl"
-				}
+				val rawUrl = instanceState.text.toString().trim()
 
 				sessionManager.login(
-					url,
-					usernameState.text.toString(),
+					rawUrl,
+					usernameState.text.toString().trim(),
 					passwordState.text.toString()
 				)
 
