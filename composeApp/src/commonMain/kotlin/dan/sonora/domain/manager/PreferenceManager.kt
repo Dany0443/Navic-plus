@@ -90,6 +90,7 @@ class PreferenceManager(
 		)
 	var gaplessPlayback by preference(true)
 	var audioOffload by preference(false)
+	var autoFillQueue by preference(false)
 	/**
 	 * Crossfade duration in seconds. 0 means crossfade is disabled.
 	 */

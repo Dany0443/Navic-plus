@@ -32,6 +32,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 import sonora.composeapp.generated.resources.Res
 import sonora.composeapp.generated.resources.option_audio_offload
+import sonora.composeapp.generated.resources.option_auto_fill_queue
+import sonora.composeapp.generated.resources.subtitle_auto_fill_queue
 import sonora.composeapp.generated.resources.option_advanced_equalizer
 import sonora.composeapp.generated.resources.option_crossfade
 import sonora.composeapp.generated.resources.option_crossfade_off
@@ -161,6 +163,12 @@ fun SettingsPlaybackScreen() {
 							subtitle = { Text(stringResource(Res.string.subtitle_audio_offload)) },
 							value = preferenceManager.audioOffload,
 							onSetValue = { preferenceManager.audioOffload = it }
+						)
+						SettingSwitchRow(
+							title = { Text(stringResource(Res.string.option_auto_fill_queue)) },
+							subtitle = { Text(stringResource(Res.string.subtitle_auto_fill_queue)) },
+							value = preferenceManager.autoFillQueue,
+							onSetValue = { preferenceManager.autoFillQueue = it }
 						)
 						FormRow {
 							Column(Modifier.fillMaxWidth()) {

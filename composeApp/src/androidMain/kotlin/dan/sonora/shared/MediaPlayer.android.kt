@@ -56,8 +56,11 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import coil3.PlatformContext as CoilPlatformContext
 
+import dan.sonora.domain.repositories.SongRepository
+
 class AndroidMediaPlayerViewModel(
 	stateRepository: PlayerStateRepository,
+	songRepository: SongRepository,
 	downloadManager: DownloadManager,
 	connectivityManager: ConnectivityManager,
 	preferenceManager: PreferenceManager,
@@ -68,6 +71,7 @@ class AndroidMediaPlayerViewModel(
 	private val snackBarManager: SnackBarManager
 ) : MediaPlayerViewModel(
 	stateRepository = stateRepository,
+	songRepository = songRepository,
 	connectivityManager = connectivityManager,
 	downloadManager = downloadManager,
 	preferenceManager = preferenceManager
@@ -120,6 +124,7 @@ class AndroidMediaPlayerViewModel(
 					override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
 						updatePlaybackState()
 						skipUnavailableSong()
+						checkAndAutoFillQueue()
 					}
 
 					override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -176,6 +181,7 @@ class AndroidMediaPlayerViewModel(
 					syncPlayerWithState(state)
 					pendingSyncState = null
 				}
+				checkAndAutoFillQueue()
 
 				combine(
 					downloadManager.downloadedSongs,
