@@ -449,9 +449,20 @@ class AndroidMediaPlayerViewModel(
 	}
 
 	override fun addToQueue(songs: List<DomainSong>, notify: Boolean) {
+		if (songs.isEmpty()) return
 		viewModelScope.launch {
-			val items = songs.map { it.toMediaItem() }
-			controller?.addMediaItems(items)
+			val items = withContext(Dispatchers.Default) {
+				songs.map { it.toMediaItem() }
+			}
+			controller?.let { player ->
+				if (items.size > 500) {
+					items.chunked(500).forEach { chunk ->
+						player.addMediaItems(chunk)
+					}
+				} else {
+					player.addMediaItems(items)
+				}
+			}
 			_uiState.update { state ->
 				val newQueue = state.queue + songs
 				state.copy(
