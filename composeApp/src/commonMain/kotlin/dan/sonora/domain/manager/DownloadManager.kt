@@ -11,6 +11,8 @@ import io.ktor.client.request.header
 import io.ktor.client.request.prepareRequest
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.HttpMethod
+import io.ktor.http.isSuccess
+import kotlinx.io.IOException
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -347,20 +349,20 @@ class DownloadManager(
 		var progressJob: Job? = null
 
 		val isCellular = connectivityManager.isCellular.value
-		val bitrate = if (preferenceManager.isAdvancedDownloadTranscodingActive) {
+		val reqBitrate = if (preferenceManager.isAdvancedDownloadTranscodingActive) {
 			if (isCellular) preferenceManager.customDownloadMaxBitrateCellular else preferenceManager.customDownloadMaxBitrateWifi
 		} else {
 			val quality = if (isCellular) preferenceManager.downloadQualityCellular else preferenceManager.downloadQualityWifi
 			quality.bitrateAndroid
 		}
-		val container = if (preferenceManager.isAdvancedDownloadTranscodingActive) {
+		val reqContainer = if (preferenceManager.isAdvancedDownloadTranscodingActive) {
 			if (isCellular) preferenceManager.customDownloadFormatCellular else preferenceManager.customDownloadFormatWifi
 		} else {
 			val quality = if (isCellular) preferenceManager.downloadQualityCellular else preferenceManager.downloadQualityWifi
 			quality.containerAndroid
 		}
 
-		val extension = container?.takeIf { it.isNotBlank() } ?: song.fileExtension
+		val extension = reqContainer?.takeIf { it.isNotBlank() } ?: song.fileExtension
 
 		if (playbackCacheManager.isFullyCached(song.id)) {
 			val path = storageManager.getDownloadPath(song.id, extension)
@@ -371,8 +373,8 @@ class DownloadManager(
 						status = DownloadStatus.DOWNLOADED,
 						progress = 1f,
 						filePath = path,
-						bitrate = bitrate,
-						format = container
+						bitrate = reqBitrate,
+						format = reqContainer
 					)
 				)
 				Logger.i("DownloadManager", "Promoted full playback stream cache to permanent download for ${song.id}")
@@ -380,56 +382,88 @@ class DownloadManager(
 			}
 		}
 
-		val request = client.prepareRequest(
-			sessionManager.api.getStreamUrl(
-				id = song.id,
-				maxBitRate = bitrate,
-				format = container?.takeIf { it.isNotBlank() }
-			) + "&estimateContentLength=true"
-		) {
-			method = HttpMethod.Get
-			onDownload { bytesSentTotal, contentLength ->
-				if (contentLength != null && contentLength > 0L) {
-					val progress = (bytesSentTotal.toDouble() / contentLength).toFloat()
-					if (progress - lastProgress >= 0.01f || progress == 1f) {
-						lastProgress = progress
-						Logger.i("DownloadManager", "downloading ${song.id} $progress")
+		suspend fun tryDownload(targetBitrate: Int?, targetContainer: String?): Boolean {
+			return try {
+				val streamExt = targetContainer?.takeIf { it.isNotBlank() } ?: song.fileExtension
+				val baseUrl = if (targetBitrate != null) {
+					sessionManager.api.getStreamUrl(
+						id = song.id,
+						maxBitRate = targetBitrate,
+						format = targetContainer?.takeIf { it.isNotBlank() }
+					)
+				} else {
+					sessionManager.api.getStreamUrl(
+						id = song.id,
+						format = targetContainer?.takeIf { it.isNotBlank() }
+					)
+				}
+				val url = "$baseUrl&estimateContentLength=true"
 
-						progressJob?.cancel()
-
-						progressJob = scope.launch {
-							downloadDao.updateProgress(
-								song.id,
-								DownloadStatus.DOWNLOADING,
-								progress
-							)
+				val request = client.prepareRequest(url) {
+					method = HttpMethod.Get
+					onDownload { bytesSentTotal, contentLength ->
+						if (contentLength != null && contentLength > 0L) {
+							val progress = (bytesSentTotal.toDouble() / contentLength).toFloat()
+							if (progress - lastProgress >= 0.01f || progress == 1f) {
+								lastProgress = progress
+								progressJob?.cancel()
+								progressJob = scope.launch {
+									downloadDao.updateProgress(
+										song.id,
+										DownloadStatus.DOWNLOADING,
+										progress
+									)
+								}
+							}
 						}
 					}
-				} else {
-					Logger.i("DownloadManager", "downloaded ${song.id}")
 				}
+
+				request.execute { response ->
+					if (!response.status.isSuccess()) {
+						Logger.w("DownloadManager", "Stream request returned non-success status ${response.status} for ${song.id}")
+						return@execute false
+					}
+
+					Logger.i("DownloadManager", "writing download for ${song.id}")
+					val path = storageManager.getDownloadPath(song.id, streamExt)
+					storageManager.saveFile(path, response.bodyAsChannel())
+					Logger.i("DownloadManager", "wrote download for ${song.id}")
+
+					progressJob?.cancel()
+
+					downloadDao.insertDownload(
+						DownloadEntity(
+							songId = song.id,
+							status = DownloadStatus.DOWNLOADED,
+							progress = 1f,
+							filePath = path,
+							bitrate = targetBitrate,
+							format = targetContainer
+						)
+					)
+					playbackCacheManager.evictIncompleteCache(song.id)
+					true
+				}
+			} catch (e: Exception) {
+				if (e is CancellationException) throw e
+				Logger.w("DownloadManager", "Failed download attempt with bitrate=$targetBitrate container=$targetContainer for ${song.id}", e)
+				false
 			}
 		}
 
-		request.execute { response ->
-			Logger.i("DownloadManager", "writing download for ${song.id}")
-			val path = storageManager.getDownloadPath(song.id, extension)
-			storageManager.saveFile(path, response.bodyAsChannel())
-			Logger.i("DownloadManager", "wrote download for ${song.id}")
+		// 1. Try requested quality settings
+		val success = tryDownload(reqBitrate, reqContainer)
 
-			progressJob?.cancel()
-
-			downloadDao.insertDownload(
-				DownloadEntity(
-					songId = song.id,
-					status = DownloadStatus.DOWNLOADED,
-					progress = 1f,
-					filePath = path,
-					bitrate = bitrate,
-					format = container
-				)
-			)
-			playbackCacheManager.evictIncompleteCache(song.id)
+		// 2. If transcoded download failed (e.g. server transcoding error/missing ffmpeg), fallback to original raw stream
+		if (!success && (reqBitrate != null || !reqContainer.isNullOrBlank())) {
+			Logger.i("DownloadManager", "Falling back to original raw stream for ${song.id}")
+			val fallbackSuccess = tryDownload(null, null)
+			if (!fallbackSuccess) {
+				throw IOException("Download failed after both transcoded and raw stream attempts for ${song.id}")
+			}
+		} else if (!success) {
+			throw IOException("Download failed for ${song.id}")
 		}
 	}
 }
