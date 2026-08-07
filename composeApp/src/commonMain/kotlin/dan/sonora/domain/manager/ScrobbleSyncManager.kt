@@ -76,7 +76,6 @@ class ScrobbleSyncManager(
 				}
 				var cursor: String? = null
 				var pageNumber = 0
-				val maxPagesPerRun = if (backfilled) Int.MAX_VALUE else 10
 
 				do {
 					pageNumber++
@@ -105,23 +104,17 @@ class ScrobbleSyncManager(
 					val oldestTs = page.scrobbles.minOfOrNull { it.timestamp }
 					val newestTs = page.scrobbles.maxOfOrNull { it.timestamp }
 					val progressPct = (page.progress * 100).toInt()
-					val termReason = if (nextCursor == null) "End of history reached" else if (pageNumber >= maxPagesPerRun) "Batch page limit reached ($maxPagesPerRun pages)" else "More pages available"
+					val termReason = if (nextCursor == null) "End of history reached" else "More pages available"
 
 					dan.sonora.util.core.Logger.i(
 						"ScrobbleSyncManager",
 						"[Sync Page] Provider: ${provider.id} | Page: $pageNumber | Oldest TS: $oldestTs | Newest TS: $newestTs | Listens: ${page.scrobbles.size} | Inserts: $insertedCount | Progress: $progressPct% | Termination: $termReason"
 					)
 
-					if (pageNumber >= maxPagesPerRun && nextCursor != null) {
-						dan.sonora.util.core.Logger.i("ScrobbleSyncManager", "Batch limit of $maxPagesPerRun pages reached for initial sync. Pausing run for next cycle.")
-						break
-					}
 					cursor = nextCursor
 				} while (cursor != null)
 
-				if (cursor == null) {
-					syncStore.setBackfillComplete(provider.id)
-				}
+				syncStore.setBackfillComplete(provider.id)
 				syncStore.set(provider.id, Clock.System.now().toEpochMilliseconds() / 1000)
 			} catch (error: CancellationException) {
 				throw error

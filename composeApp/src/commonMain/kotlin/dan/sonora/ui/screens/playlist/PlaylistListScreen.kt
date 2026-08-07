@@ -114,12 +114,6 @@ fun PlaylistListScreen(
 	val isListMode = preferenceManager.playlistIsListMode
 
 	val actions: @Composable RowScope.() -> Unit = {
-		IconButton(onClick = { preferenceManager.playlistIsListMode = !isListMode }) {
-			Icon(
-				if (isListMode) Icons.Outlined.Album else Icons.Outlined.PlaylistPlay,
-				contentDescription = "Toggle View Mode"
-			)
-		}
 		PlaylistListScreenSortButton(
 			nested = nested,
 			selectedSorting = selectedSorting,

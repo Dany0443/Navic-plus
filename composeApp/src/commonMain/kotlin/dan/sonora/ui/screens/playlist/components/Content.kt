@@ -34,6 +34,7 @@ fun LazyGridScope.playlistListScreenContent(
 			LocalMusicCollectionItem(
 				modifier = Modifier.animateItem(),
 				tab = "playlists",
+				isListMode = isListMode,
 				onClick = onOpenLocalMusic
 			)
 		}

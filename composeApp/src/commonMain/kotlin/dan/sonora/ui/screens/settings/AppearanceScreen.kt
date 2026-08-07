@@ -247,6 +247,14 @@ fun SettingsAppearanceScreen() {
 
 				FormTitle(stringResource(Res.string.title_miscellaneous))
 				Form {
+					SettingSelectionRow(
+						title = { Text("Playlists display mode") },
+						items = listOf("Grid", "List").toImmutableList(),
+						label = { it },
+						selection = if (preferenceManager.playlistIsListMode) "List" else "Grid",
+						onSelect = { preferenceManager.playlistIsListMode = (it == "List") }
+					)
+
 					SettingSwitchRow(
 						title = { Text(stringResource(Res.string.option_dynamic_theming)) },
 						subtitle = { Text(stringResource(Res.string.subtitle_dynamic_theming)) },
