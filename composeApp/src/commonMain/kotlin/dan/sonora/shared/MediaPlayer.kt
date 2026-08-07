@@ -112,9 +112,16 @@ abstract class MediaPlayerViewModel(
 		} else {
 			resume()
 		}
+		saveStateNow()
 	}
 
 	abstract fun syncPlayerWithState(state: PlayerUiState)
+
+	fun saveStateNow() {
+		viewModelScope.launch {
+			saveStateInternal(uiState.value)
+		}
+	}
 
 	protected fun checkAndAutoFillQueue() {
 		if (!preferenceManager.autoFillQueue) return

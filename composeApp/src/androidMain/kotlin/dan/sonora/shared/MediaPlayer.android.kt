@@ -133,7 +133,7 @@ class AndroidMediaPlayerViewModel(
 					}
 
 					override fun onIsPlayingChanged(isPlaying: Boolean) {
-						if (isPlaying) startProgressLoop()
+						if (isPlaying) startProgressLoop() else saveStateNow()
 						val intent =
 							Intent("${application.packageName}.NOW_PLAYING_UPDATED").apply {
 								setPackage(application.packageName)
@@ -776,12 +776,14 @@ class AndroidMediaPlayerViewModel(
 				_uiState.update { state ->
 					state.copy(progress = normalized)
 				}
+				saveStateNow()
 			}
 		}
 	}
 
 	override fun onCleared() {
 		viewModelScope.launch {
+			saveStateNow()
 			super.onCleared()
 			controllerFuture?.let { MediaController.releaseFuture(it) }
 		}
