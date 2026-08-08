@@ -160,6 +160,9 @@ class AndroidMediaPlayerViewModel(
 					override fun onPlaybackStateChanged(playbackState: Int) {
 						_uiState.update { it.copy(isLoading = playbackState == Player.STATE_BUFFERING) }
 						updatePlaybackState()
+						if (playbackState == Player.STATE_ENDED) {
+							checkAndAutoFillQueue(autoPlayIfEnded = true)
+						}
 					}
 
 					override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -417,6 +420,18 @@ class AndroidMediaPlayerViewModel(
 					}
 					break
 				}
+			}
+		}
+	}
+
+	override fun playIfEnded() {
+		controller?.let { player ->
+			if (player.playbackState == Player.STATE_ENDED || !player.isPlaying) {
+				if (player.currentMediaItemIndex < player.mediaItemCount - 1) {
+					player.seekToNextMediaItem()
+				}
+				player.prepare()
+				player.play()
 			}
 		}
 	}

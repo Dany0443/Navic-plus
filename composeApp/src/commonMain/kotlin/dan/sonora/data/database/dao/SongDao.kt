@@ -64,6 +64,12 @@ interface SongDao {
 	@Query("SELECT * FROM SongEntity ORDER BY RANDOM() LIMIT :count")
 	suspend fun getRandomSongs(count: Int): List<SongEntity>
 
+	@Query("SELECT * FROM SongEntity WHERE (artistName = :artistName OR genre = :genre) AND songId NOT IN (:excludeIds) ORDER BY RANDOM() LIMIT :count")
+	suspend fun getSimilarSongs(artistName: String?, genre: String?, excludeIds: List<String>, count: Int): List<SongEntity>
+
+	@Query("SELECT * FROM SongEntity WHERE songId NOT IN (:excludeIds) ORDER BY RANDOM() LIMIT :count")
+	suspend fun getRandomSongsExcluding(excludeIds: List<String>, count: Int): List<SongEntity>
+
 	@Query("SELECT * FROM SongEntity WHERE title LIKE '%' || :query || '%' COLLATE NOCASE")
 	suspend fun searchSongsList(query: String): List<SongEntity>
 

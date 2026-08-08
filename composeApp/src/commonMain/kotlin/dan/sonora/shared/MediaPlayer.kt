@@ -123,21 +123,47 @@ abstract class MediaPlayerViewModel(
 		}
 	}
 
-	protected fun checkAndAutoFillQueue() {
+	private var isAutoFillingQueue = false
+
+	open fun checkAndAutoFillQueue(autoPlayIfEnded: Boolean = false) {
 		if (!preferenceManager.autoFillQueue) return
 
 		val state = uiState.value
 		if (state.queue.isEmpty()) return
+		if (state.repeatMode != 0) return
 
-		val remainingCount = state.queue.size - state.currentIndex
+		val totalQueueSize = state.queue.size
+		val currentIndex = state.currentIndex
+		val remainingCount = if (currentIndex in 0 until totalQueueSize) {
+			totalQueueSize - 1 - currentIndex
+		} else {
+			0
+		}
 
-		if (remainingCount <= 1) {
+		if (remainingCount <= 2 || autoPlayIfEnded) {
+			if (isAutoFillingQueue) return
+			isAutoFillingQueue = true
 			viewModelScope.launch {
-				val randomSongs = songRepository.getRandomSongs(1)
-				addToQueue(randomSongs, notify = false)
+				try {
+					val existingIds = state.queue.takeLast(50).map { it.id }
+					val currentSong = state.currentSong ?: state.queue.lastOrNull()
+					val nextSongs = songRepository.getSimilarOrRandomSongs(currentSong, existingIds, 5)
+					if (nextSongs.isNotEmpty()) {
+						addToQueue(nextSongs, notify = false)
+						if (autoPlayIfEnded) {
+							playIfEnded()
+						}
+					}
+				} catch (e: Exception) {
+					Logger.e("MediaPlayerViewModel", "Failed to auto-fill queue", e)
+				} finally {
+					isAutoFillingQueue = false
+				}
 			}
 		}
 	}
+
+	protected open fun playIfEnded() {}
 
 	private suspend fun restoreState() {
 		val savedJson = stateRepository.loadState()

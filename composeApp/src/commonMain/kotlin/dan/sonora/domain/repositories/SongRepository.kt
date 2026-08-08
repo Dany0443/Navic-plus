@@ -35,6 +35,33 @@ class SongRepository(
 		return songDao.getRandomSongs(count).map { it.toDomainModel() }
 	}
 
+	suspend fun getSimilarOrRandomSongs(
+		currentSong: DomainSong?,
+		excludeIds: List<String>,
+		count: Int
+	): List<DomainSong> {
+		val safeExclude = if (excludeIds.isEmpty()) listOf("") else excludeIds
+		val artist = currentSong?.artistName
+		val genre = currentSong?.genre
+
+		val similar = if (!artist.isNullOrBlank() || !genre.isNullOrBlank()) {
+			songDao.getSimilarSongs(artist, genre, safeExclude, count).map { it.toDomainModel() }
+		} else {
+			emptyList()
+		}
+
+		if (similar.size >= count) {
+			return similar
+		}
+
+		val currentSimilarIds = similar.map { it.id }
+		val allExclude = (safeExclude + currentSimilarIds).distinct()
+		val needed = count - similar.size
+		val randomFallback = songDao.getRandomSongsExcluding(allExclude, needed).map { it.toDomainModel() }
+
+		return similar + randomFallback
+	}
+
 	private suspend fun getLocalData(
 		listType: DomainSongListType,
 		reversed: Boolean
